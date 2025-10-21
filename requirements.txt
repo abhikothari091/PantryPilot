@@ -1,0 +1,12 @@
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Database
+psycopg2-binary>=2.9.0
+
+# Google Cloud Storage
+google-cloud-storage>=2.10.0
+
+# Utilities
+python-dotenv>=1.0.0

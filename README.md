@@ -136,11 +136,15 @@ We welcome contributions! Here's how you can help:
 
 ## Dataset
 
-This project uses the **CORD (Consolidated Receipt Dataset)** for training:
+This project uses the **CORD v2 (Consolidated Receipt Dataset)** for training:
 - 900+ receipt images with structured annotations
 - Multi-language support
 - Real-world receipt variations
 - Rich ground truth labels (items, prices, totals, etc.)
+
+**Source:** [CORD v2 on Hugging Face](https://huggingface.co/datasets/naver-clova-ix/cord-v2)
+
+**Dataset License:** CC BY 4.0 (Creative Commons Attribution 4.0 International)
 
 **Citation:**
 ```
@@ -151,7 +155,9 @@ Workshop on Document Intelligence at NeurIPS 2019.
 
 ## License
 
-[Add your license here]
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+**Note:** The CORD v2 dataset used in this project is licensed under CC BY 4.0.
 
 ## Contact
 

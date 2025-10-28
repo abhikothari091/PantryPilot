@@ -1,0 +1,12 @@
+,user_id,transaction_id,item_id,item_name,quantity_purchased,unit,price_total,purchase_date,store_name,payment_method,discount_applied,category,brand,location,receipt_source,weekday,purchase_channel,consumption_start_date,expected_depletion_date
+count,6000,6000,6000,6000,6000.0,6000,6000.0,6000,6000,6000,6000,6000,6000,6000,6000,6000,6000,6000,6000
+unique,20,6000,109,109,,3,,365,7,4,2,8,8,4,3,7,2,368,476
+top,U001,TU001_20241224_0000,I_lemons,lemons,,kg,,2025-02-18,Target,debit_card,False,produce,Generic,"Boston, MA",manual,Saturday,in_store,2025-06-20,2025-09-14
+freq,300,1,95,95,,4039,,27,879,1540,4500,1467,829,2400,2037,895,4011,30,30
+mean,,,,,3.5885416666666665,,13.616901666666667,,,,,,,,,,,,
+std,,,,,5.489851774138736,,20.095184766309796,,,,,,,,,,,,
+min,,,,,0.3,,0.63,,,,,,,,,,,,
+25%,,,,,0.95,,3.95,,,,,,,,,,,,
+50%,,,,,1.205,,6.88,,,,,,,,,,,,
+75%,,,,,2.27,,11.77,,,,,,,,,,,,
+max,,,,,23.0,,203.88,,,,,,,,,,,,

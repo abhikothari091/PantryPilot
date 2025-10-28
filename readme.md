@@ -194,9 +194,38 @@ gcloud storage ls gs://pantrypilot-dvc-storage/data/ --recursive  # View remote 
 
 ---
 
-### 6. Orchestration (Future Scope)
+### 6. Orchestration with Airflow
 
-The modular design supports future integration with **Prefect** or **Airflow** for automated DAG execution (Ingest → Validate → Transform → Alert) and scheduled runs on cloud environments like Databricks or Azure ML.
+**DAG:** `data_pipeline/airflow/dags/pantry_pilot_dag.py`
+
+**Pipeline Flow:**
+
+```
+ingest_neon → validate_data → transform_data → detect_anomalies → dvc_status
+```
+
+**DAG Configuration:**
+- **DAG ID:** `pantrypilot_data_pipeline`
+- **Schedule:** Manual trigger (set `schedule_interval="0 6 * * *"` for daily at 6 AM)
+- **Tasks:**
+  1. `ingest_neon` - Extract data from NeonDB
+  2. `validate_data` - Great Expectations validation
+  3. `transform_data` - Unit conversion and feature engineering
+  4. `detect_anomalies` - Low stock and expiry detection
+  5. `dvc_status` - Check data version status
+
+**Running the DAG:**
+
+```bash
+# Test run
+airflow dags test pantrypilot_data_pipeline 2025-01-01
+
+# Trigger manually
+airflow dags trigger pantrypilot_data_pipeline
+
+# Enable scheduled runs
+# Edit schedule_interval in pantry_pilot_dag.py
+```
 
 ---
 
@@ -208,19 +237,17 @@ PantryPilot/
 │   ├── alerts.dvc                 # DVC tracked alerts directory
 │   ├── processed.dvc              # DVC tracked processed directory
 │   ├── raw.dvc                    # DVC tracked raw directory
-│   ├── airflow/                   # Airflow DAG definitions
+│   ├── airflow/                   # Airflow orchestration
 │   │   └── dags/
-│   │       └── pantry_pilot_dag.py
+│   │       └── pantry_pilot_dag.py  # 5-task pipeline DAG
 │   ├── data/
-│   │   ├── alerts/                # Generated alerts CSVs
-│   │   ├── processed/             # Transformed datasets
-│   │   ├── raw/                   # Snapshot CSVs from Neon
+│   │   ├── alerts/                # Generated alerts CSVs (DVC tracked)
+│   │   ├── processed/             # Transformed datasets (DVC tracked)
+│   │   ├── raw/                   # Snapshot CSVs from Neon (DVC tracked)
 │   │   ├── receipts/              # CORD receipt dataset
 │   │   ├── scripts/               # Synthetic data utilities
 │   │   │   └── synthetic_generate.py
 │   │   └── synthetic_data/        # Generated synthetic datasets
-│   ├── docs/                      # Pipeline-specific documentation
-│   ├── flows/                     # Prefect workflow definitions
 │   ├── great_expectations/        # GE configuration and artifacts
 │   ├── reports/                   # Validation and profiling outputs
 │   ├── screenshots/               # Pipeline screenshots and documentation
@@ -343,9 +370,12 @@ This pipeline now forms the **foundation** of the larger PantryPilot system, sup
 ## 🚀 Future Enhancements
 
 * ~~Configure DVC remote storage~~ ✅ **Completed:** Configured GCS (`gs://pantrypilot-dvc-storage/data`)
-* Integrate Prefect for automated end-to-end orchestration (currently using Airflow).
-* Introduce APIs for real-time alerting and dashboarding.
-* Enhance Great Expectations suites with dynamic thresholds and schema evolution.
-* Set up automated DVC push/pull in CI/CD pipeline.
+* ~~Integrate Airflow for orchestration~~ ✅ **Completed:** DAG with 5 tasks (ingest → validate → transform → anomalies → dvc)
+* Deploy Airflow to cloud (Databricks, Azure ML, or Google Cloud Composer)
+* Introduce APIs for real-time alerting and dashboarding
+* Enhance Great Expectations suites with dynamic thresholds and schema evolution
+* Set up automated DVC push/pull in CI/CD pipeline
+* Add Airflow sensors for triggering on data arrival
+* Implement email/Slack notifications for validation failures
 
 ---

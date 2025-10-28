@@ -24,7 +24,7 @@ The pipeline ensures that every dataset (inventory, purchase history, and receip
 
 ```
 [Synthetic Data Generation]
- data/scripts/synthetic_generate.py
+ Data_Pipeline/data/scripts/synthetic_generate.py
  → Generates diverse, unbiased food items (Western + Non-Western cuisines)
        │
        ▼
@@ -35,19 +35,19 @@ Neon Database (PostgreSQL)
        │
        ▼
 [Ingestion Layer]
- scripts/ingest_neon.py
+ Data_Pipeline/scripts/ingest_neon.py
        │
        ▼
 [Validation Layer]
- scripts/validate_data.py (Great Expectations)
+ Data_Pipeline/scripts/validate_data.py (Great Expectations)
        │
        ▼
 [Transformation Layer]
- scripts/transform_data.py + utils_pint.py
+ Data_Pipeline/scripts/transform_data.py + Data_Pipeline/scripts/utils_pint.py
        │
        ▼
 [Monitoring & Alerts]
- scripts/update_anomalies.py
+ Data_Pipeline/scripts/update_anomalies.py
        │
        ▼
 [Versioning]
@@ -60,7 +60,7 @@ Neon Database (PostgreSQL)
 
 ### 0. Synthetic Data Generation
 
-**Script:** `data/scripts/synthetic_generate.py`
+**Script:** `Data_Pipeline/data/scripts/synthetic_generate.py`
 **Goal:** Generate realistic, diverse grocery data for testing and development.
 
 **Key Features:**
@@ -70,8 +70,8 @@ Neon Database (PostgreSQL)
 * **Configurable:** 20 users, 50 items per user, 300 purchases per user
 
 **Output:**
-* `data/synthetic_data/pantrypilot_inventory_u20_i60_shared_ids.csv`
-* `data/synthetic_data/pantrypilot_purchase_u20_i60_shared_ids.csv`
+* `Data_Pipeline/data/synthetic_data/pantrypilot_inventory_u20_i60_shared_ids.csv`
+* `Data_Pipeline/data/synthetic_data/pantrypilot_purchase_u20_i60_shared_ids.csv`
 
 **Upload to NeonDB:** Data is uploaded to PostgreSQL database for pipeline consumption.
 
@@ -79,8 +79,8 @@ Neon Database (PostgreSQL)
 
 ### 1. Ingestion Layer
 
-**Script:** `scripts/ingest_neon.py`
-**Goal:** Extract structured data from NeonDB and store as snapshots in `/data/raw/`.
+**Script:** `Data_Pipeline/scripts/ingest_neon.py`
+**Goal:** Extract structured data from NeonDB and store as snapshots in `Data_Pipeline/data/raw/`.
 
 **Datasets:**
 
@@ -88,13 +88,13 @@ Neon Database (PostgreSQL)
 * `purchase_history.csv` (synthetic data uploaded to NeonDB)
 * `cord_dataset.csv` (receipt images dataset)
 
-**Output Path:** `data/raw/`
+**Output Path:** `Data_Pipeline/data/raw/`
 
 ---
 
 ### 2. Validation Layer
 
-**Script:** `scripts/validate_data.py`
+**Script:** `Data_Pipeline/scripts/validate_data.py`
 **Framework:** Great Expectations
 
 **Purpose:**
@@ -104,8 +104,8 @@ Neon Database (PostgreSQL)
 
 **Outputs:**
 
-* `great_expectations/uncommitted/data_docs/local_site/index.html`
-* `reports/validation_summary.csv`
+* `Data_Pipeline/great_expectations/uncommitted/data_docs/local_site/index.html`
+* `Data_Pipeline/reports/validation_summary.csv`
 
 **Example Output:**
 
@@ -120,7 +120,7 @@ Failures intentionally left to demonstrate detection of data issues.
 
 ### 3. Transformation Layer
 
-**Scripts:** `transform_data.py`, `utils_pint.py`
+**Scripts:** `Data_Pipeline/scripts/transform_data.py`, `Data_Pipeline/scripts/utils_pint.py`
 **Goal:** Normalize units and engineer useful features.
 
 **Key Steps:**
@@ -128,16 +128,16 @@ Failures intentionally left to demonstrate detection of data issues.
 * Convert units to canonical form using **Pint** (g/ml/pcs)
 * Derive: `stock_value = qty × unit_cost`, `is_low_stock` flag
 * Calculate per-unit prices in purchases
-* Save standardized data to `/data/processed/`
+* Save standardized data to `Data_Pipeline/data/processed/`
 
 ---
 
 ### 4. Monitoring & Alerts
 
-**Script:** `scripts/update_anomalies.py`
+**Script:** `Data_Pipeline/scripts/update_anomalies.py`
 **Purpose:** Identify low-stock or expired products and log them.
 
-**Output:** `data/alerts/alerts.csv`
+**Output:** `Data_Pipeline/data/alerts/alerts.csv`
 
 | item_name | issue_type | quantity | expiry_date |
 | --------- | ---------- | -------- | ----------- |
@@ -153,9 +153,9 @@ Failures intentionally left to demonstrate detection of data issues.
 **Tracked Folders:**
 
 ```
-data/raw/
-data/processed/
-data/alerts/
+Data_Pipeline/data/raw/
+Data_Pipeline/data/processed/
+Data_Pipeline/data/alerts/
 ```
 
 **Commands:**
@@ -163,7 +163,7 @@ data/alerts/
 ```bash
 dvc init
 git add .dvc .dvcignore
-dvc add data/raw data/processed data/alerts
+dvc add Data_Pipeline/data/raw Data_Pipeline/data/processed Data_Pipeline/data/alerts
 git commit -m "Track datasets with DVC"
 ```
 
@@ -185,43 +185,44 @@ The modular design supports future integration with **Prefect** or **Airflow** f
 
 ```
 PantryPilot/
-├── data/
-│   ├── raw.dvc                    # DVC tracked raw data
-│   ├── processed.dvc              # DVC tracked processed data
-│   ├── alerts.dvc                 # DVC tracked alerts
-│   ├── receipts/                  # CORD receipt dataset
-│   │   ├── cord_dataset/
-│   │   ├── cord_dataset_with_urls.csv
-│   │   └── cord_v2_dataset.csv
+├── Data_Pipeline/
+│   ├── alerts.dvc                 # DVC tracked alerts directory
+│   ├── processed.dvc              # DVC tracked processed directory
+│   ├── raw.dvc                    # DVC tracked raw directory
+│   ├── airflow/                   # Airflow DAG definitions
+│   ├── data/
+│   │   ├── alerts/                # Generated alerts CSVs
+│   │   ├── processed/             # Transformed datasets
+│   │   ├── raw/                   # Snapshot CSVs from Neon
+│   │   ├── receipts/              # CORD receipt dataset
+│   │   ├── scripts/               # Synthetic data utilities
+│   │   │   └── synthetic_generate.py
+│   │   └── synthetic_data/        # Generated synthetic datasets
+│   ├── docs/                      # Pipeline-specific documentation
+│   ├── great_expectations/        # GE configuration and artifacts
+│   ├── reports/                   # Validation and profiling outputs
 │   ├── scripts/
-│   │   └── synthetic_generate.py  # Synthetic data generator
-│   └── synthetic_data/            # Generated synthetic data
-│       ├── pantrypilot_inventory_u20_i60_shared_ids.csv
-│       └── pantrypilot_purchase_u20_i60_shared_ids.csv
-│
-├── scripts/
-│   ├── ingest_neon.py            # NeonDB data ingestion
-│   ├── validate_data.py          # Great Expectations validation
-│   ├── transform_data.py         # Data transformation
-│   ├── update_anomalies.py       # Anomaly detection
-│   ├── utils_pint.py             # Unit conversion utilities
-│   ├── config.py                 # Configuration settings
-│   └── receipts/                 # Receipt processing scripts
-│       ├── create_url_csv.py
-│       ├── upload_to_gcs.sh
-│       └── upload_to_neon.py
-│
+│   │   ├── bias_check.py
+│   │   ├── config.py
+│   │   ├── ingest_neon.py
+│   │   ├── logging_conf.py
+│   │   ├── profile_stats.py
+│   │   ├── transform_data.py
+│   │   ├── update_anomalies.py
+│   │   ├── utils_pint.py
+│   │   ├── validate_data.py
+│   │   └── receipts/
+│   │       ├── create_url_csv.py
+│   │       ├── upload_to_gcs.sh
+│   │       └── upload_to_neon.py
+│   ├── tests/                     # Pytest suites
+│   ├── requirements.txt
+│   ├── dvc.yaml
+│   └── readme.md
 ├── DataCard/                      # Model and data documentation
-│   ├── errors-failure.pdf         # Error analysis and failure modes
-│   └── user-needs.pdf             # User requirements and needs analysis
-│
+├── docs/                          # Global documentation
 ├── flows/                         # Prefect workflow definitions
-├── great_expectations/            # GE configuration and suites
-├── docs/                          # Documentation
-├── .dvc/                          # DVC configuration
-├── dvc.yaml                       # DVC pipeline definition
-├── requirements.txt
-└── readme.md
+└── venv/                          # Local Python virtual environment
 ```
 
 ---
@@ -249,42 +250,40 @@ git clone https://github.com/abhikothari091/PantryPilot.git
 cd PantryPilot
 python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate
-pip install -r requirements.txt
+pip install --upgrade pip
+pip install -r Data_Pipeline/requirements.txt
+cd Data_Pipeline
 ```
 
-### 2. Generate Synthetic Data (Optional)
+### 2. End-to-End Execution (from `Data_Pipeline/`)
 
 ```bash
+# Optional: refresh synthetic sources feeding Neon
 python data/scripts/synthetic_generate.py
-```
 
-This generates diverse, culturally-unbiased synthetic data including both Western and Non-Western food items to prevent data bias in the model training process.
-
-### 3. Run Pipeline Stages
-
-```bash
+# Core pipeline
 python -m scripts.ingest_neon
 python -m scripts.validate_data
 python -m scripts.transform_data
 python -m scripts.update_anomalies
-```
 
-### 4. Validate Results
+# Monitoring & bias analytics
+python -m scripts.bias_check
+python -m scripts.profile_stats
 
-* Open HTML report: `great_expectations/uncommitted/data_docs/local_site/index.html`
-* Review summary: `reports/validation_summary.csv`
-
-### 5. Check Alerts
-
-```bash
-cat data/alerts/alerts.csv
-```
-
-### 6. Verify DVC Tracking
-
-```bash
+# Tests & tracking
+pytest -q tests
 dvc status
-→ Data and pipelines are up to date.
+```
+
+- Validation artefacts: `great_expectations/uncommitted/data_docs/local_site/index.html`
+- Logged summary: `reports/validation_summary.csv`
+- Alerts export: `data/alerts/alerts.csv`
+
+### 3. (Optional) Airflow Sanity Check
+
+```bash
+airflow dags test pantry_pilot_dag 2025-01-01
 ```
 
 ---
@@ -293,11 +292,11 @@ dvc status
 
 | Stage          | Output                            | Description            |
 | -------------- | --------------------------------- | ---------------------- |
-| Ingestion      | `/data/raw/*.csv`                 | Raw tables from NeonDB |
+| Ingestion      | `/Data_Pipeline/data/raw/*.csv`   | Raw tables from NeonDB |
 | Validation     | GE HTML report                    | Data quality summary   |
-| Transformation | `/data/processed/*.csv`           | Standardized data      |
-| Monitoring     | `/data/alerts/alerts.csv`         | Alerts for anomalies   |
-| Logging        | `/reports/validation_summary.csv` | Validation status      |
+| Transformation | `/Data_Pipeline/data/processed/*.csv` | Standardized data      |
+| Monitoring     | `/Data_Pipeline/data/alerts/alerts.csv` | Alerts for anomalies   |
+| Logging        | `/Data_Pipeline/reports/validation_summary.csv` | Validation status      |
 | Versioning     | `.dvc` files                      | Data lineage metadata  |
 
 ---

@@ -285,54 +285,133 @@ PantryPilot/
 | Transformation         | **Pint**                   | Unit conversions               |
 | Versioning             | **Git**, **DVC**           | Code and data reproducibility  |
 | Monitoring             | **Python scripts**         | Alert generation               |
-| Orchestration (Future) | **Prefect**                | DAG automation                 |
+| Orchestration          | **Airflow**                | DAG automation                 |
 
 ---
 
-## 🧾 Running the Pipeline
+## 🚀 Quick Start for TAs
 
-### 1. Setup
+### Prerequisites
+- Python 3.10+
+- Git
+- Access to NeonDB credentials (provided separately)
+
+### Step-by-Step Setup
+
+#### 1. Clone and Install Dependencies
 
 ```bash
+# Clone repository
 git clone https://github.com/abhikothari091/PantryPilot.git
-cd PantryPilot
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate
+cd PantryPilot/data_pipeline
+
+# Create virtual environment
+python -m venv data_pipeline_venv
+source data_pipeline_venv/bin/activate  # Windows: data_pipeline_venv\Scripts\activate
+
+# Install all dependencies (includes Airflow, pandas, Great Expectations, DVC, etc.)
 pip install --upgrade pip
-pip install -r data_pipeline/requirements.txt
-cd data_pipeline
+pip install -r requirements.txt
 ```
 
-### 2. End-to-End Execution (from `data_pipeline/`)
+#### 2. Configure Database Connection
 
 ```bash
-# Optional: refresh synthetic sources feeding Neon
-python data/scripts/synthetic_generate.py
+# Copy environment template
+cp .env.example .env
 
-# Core pipeline
+# Edit .env and replace with actual NeonDB credentials
+# DATABASE_URL='postgresql://username:password@ep-xxxxx.region.aws.neon.tech/neondb?sslmode=require'
+```
+
+**Note:** NeonDB credentials will be provided separately for evaluation.
+
+#### 3. Initialize Airflow (One-time setup)
+
+```bash
+# Set Airflow home directory
+export AIRFLOW_HOME=$(pwd)/airflow
+
+# Initialize Airflow metadata database
+airflow db migrate
+```
+
+#### 4. Run the Complete Pipeline with Airflow
+
+```bash
+# Test the entire 5-task DAG (ingest → validate → transform → detect anomalies → dvc)
+export AIRFLOW_HOME=$(pwd)/airflow
+airflow dags test pantrypilot_data_pipeline 2025-01-01
+```
+
+**Expected Output:**
+- ✅ All 5 tasks should complete successfully
+- Data files created in `data/raw/`, `data/processed/`, `data/alerts/`
+- Validation report generated in `great_expectations/uncommitted/data_docs/local_site/index.html`
+
+---
+
+## 🧾 Alternative: Manual Step-by-Step Execution
+
+If you prefer to run each pipeline stage individually:
+
+```bash
+# 1. Ingest data from NeonDB
 python -m scripts.ingest_neon
+
+# 2. Validate data quality with Great Expectations
 python -m scripts.validate_data
+
+# 3. Transform and standardize units
 python -m scripts.transform_data
+
+# 4. Detect anomalies (low stock, expired items)
 python -m scripts.update_anomalies
 
-# Monitoring & bias analytics
+# 5. (Optional) Run bias check and profiling
 python -m scripts.bias_check
 python -m scripts.profile_stats
 
-# Tests & tracking
+# 6. Run tests
 pytest -q tests
-dvc status
 ```
 
-- Validation artefacts: `great_expectations/uncommitted/data_docs/local_site/index.html`
-- Logged summary: `reports/validation_summary.csv`
-- Alerts export: `data/alerts/alerts.csv`
+**Output Locations:**
+- Raw data: `data/raw/*.csv`
+- Processed data: `data/processed/*.csv`
+- Alerts: `data/alerts/alerts.csv`
+- Validation reports: `great_expectations/uncommitted/data_docs/local_site/index.html`
+- Validation summary: `reports/validation_summary.csv`
 
-### 3. (Optional) Airflow Sanity Check
+---
+
+## 🎯 Verification Checklist
+
+After running the pipeline, verify:
+
+- [ ] Raw data files exist: `ls data/raw/` should show `inventory.csv`, `purchase_history.csv`, `cord_dataset.csv`
+- [ ] Processed data created: `ls data/processed/` should show transformed CSV files
+- [ ] Alerts generated: `cat data/alerts/alerts.csv` should show low stock and expired items
+- [ ] Validation report: Open `great_expectations/uncommitted/data_docs/local_site/index.html` in browser
+- [ ] Tests pass: `pytest -q tests` should show passing tests
+
+---
+
+## 🔧 Optional: Airflow Web UI
+
+To use the Airflow web interface:
 
 ```bash
-airflow dags test pantry_pilot_dag 2025-01-01
+# Terminal 1: Start web server
+airflow webserver --port 8080
+
+# Terminal 2: Start scheduler
+export AIRFLOW_HOME=$(pwd)/airflow
+source data_pipeline_venv/bin/activate
+airflow scheduler
 ```
+
+Visit `http://localhost:8080` to monitor DAG runs visually.
 
 ---
 

@@ -5,6 +5,7 @@ __pycache__/
 *.so
 .Python
 venv/
+.venv/
 ENV/
 env/
 
@@ -28,6 +29,19 @@ data/receipts/cord_dataset/validation/*.png
 
 # Large CSV files (optional - remove if you want to track them)
 # data/receipts/*.csv
+
+# Airflow
+data_pipeline/airflow/airflow.db
+data_pipeline/airflow/airflow.cfg
+data_pipeline/airflow/logs/
+data_pipeline/airflow/*.pid
+data_pipeline/airflow/*.log
+data_pipeline/airflow/*.err
+data_pipeline/airflow/*.out
+data_pipeline/airflow/webserver_config.py
+
+# Great Expectations (generated files)
+data_pipeline/gx/
 
 # OS
 data_pipeline/data_pipeline_venv

@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 
@@ -6,6 +7,10 @@ default_args = {
     "owner": "pantrypilot",
     "retries": 1,
 }
+
+# Get the data_pipeline directory (two levels up from this DAG file)
+DAG_DIR = Path(__file__).parent
+DATA_PIPELINE_DIR = DAG_DIR.parent.parent
 
 with DAG(
     dag_id="pantrypilot_data_pipeline",
@@ -16,29 +21,30 @@ with DAG(
     tags=["pantrypilot", "data-pipeline"],
 ) as dag:
 
+    # Use environment's python and dvc (assumes virtual environment is activated)
     ingest = BashOperator(
         task_id="ingest_neon",
-        bash_command="cd /opt/airflow/Data_Pipeline && python -m scripts.ingest_neon"
+        bash_command=f"cd {DATA_PIPELINE_DIR} && python -m scripts.ingest_neon"
     )
 
     validate = BashOperator(
         task_id="validate_data",
-        bash_command="cd /opt/airflow/Data_Pipeline && python -m scripts.validate_data"
+        bash_command=f"cd {DATA_PIPELINE_DIR} && python -m scripts.validate_data"
     )
 
     transform = BashOperator(
         task_id="transform_data",
-        bash_command="cd /opt/airflow/Data_Pipeline && python -m scripts.transform_data"
+        bash_command=f"cd {DATA_PIPELINE_DIR} && python -m scripts.transform_data"
     )
 
     anomalies = BashOperator(
         task_id="detect_anomalies",
-        bash_command="cd /opt/airflow/Data_Pipeline && python -m scripts.update_anomalies"
+        bash_command=f"cd {DATA_PIPELINE_DIR} && python -m scripts.update_anomalies"
     )
 
-    dvc_track = BashOperator(
-        task_id="dvc_status",
-        bash_command="cd /opt/airflow/Data_Pipeline && dvc status"
+    dvc_add = BashOperator(
+        task_id="dvc_add_and_push",
+        bash_command=f"cd {DATA_PIPELINE_DIR} && dvc add data/raw data/processed data/alerts && dvc push"
     )
 
-    ingest >> validate >> transform >> anomalies >> dvc_track
+    ingest >> validate >> transform >> anomalies >> dvc_add

@@ -30,5 +30,6 @@ data/receipts/cord_dataset/validation/*.png
 # data/receipts/*.csv
 
 # OS
+data_pipeline/data_pipeline_venv
 .DS_Store
 Thumbs.db

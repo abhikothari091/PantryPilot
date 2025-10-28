@@ -23,10 +23,15 @@ The pipeline ensures that every dataset (inventory, purchase history, and receip
 ## 🧱 Architecture
 
 ```
+[Synthetic Data Generation]
+ data/scripts/synthetic_generate.py
+ → Generates diverse, unbiased food items (Western + Non-Western cuisines)
+       │
+       ▼
 Neon Database (PostgreSQL)
-├── inventory
-├── purchase_history
-└── cord_dataset
+├── inventory (from synthetic data)
+├── purchase_history (from synthetic data)
+└── cord_dataset (receipt images)
        │
        ▼
 [Ingestion Layer]
@@ -46,12 +51,31 @@ Neon Database (PostgreSQL)
        │
        ▼
 [Versioning]
- Git + DVC (raw / processed / alerts)
+ Git + DVC (raw / processed / alerts / receipts / synthetic_data)
 ```
 
 ---
 
 ## 🧉 Pipeline Components
+
+### 0. Synthetic Data Generation
+
+**Script:** `data/scripts/synthetic_generate.py`
+**Goal:** Generate realistic, diverse grocery data for testing and development.
+
+**Key Features:**
+* **Bias Mitigation:** Includes both Western and Non-Western food items to prevent cultural bias in the dataset
+* **Diverse Food Items:** Rice, kimchi, tofu, soy sauce, ginger, and other Asian staples alongside Western ingredients
+* **Realistic Attributes:** Categories, expiry dates, storage types, nutritional tags, and purchase patterns
+* **Configurable:** 20 users, 50 items per user, 300 purchases per user
+
+**Output:**
+* `data/synthetic_data/pantrypilot_inventory_u20_i60_shared_ids.csv`
+* `data/synthetic_data/pantrypilot_purchase_u20_i60_shared_ids.csv`
+
+**Upload to NeonDB:** Data is uploaded to PostgreSQL database for pipeline consumption.
+
+---
 
 ### 1. Ingestion Layer
 
@@ -60,9 +84,9 @@ Neon Database (PostgreSQL)
 
 **Datasets:**
 
-* `inventory.csv`
-* `purchase_history.csv`
-* `cord_dataset.csv`
+* `inventory.csv` (synthetic data uploaded to NeonDB)
+* `purchase_history.csv` (synthetic data uploaded to NeonDB)
+* `cord_dataset.csv` (receipt images dataset)
 
 **Output Path:** `data/raw/`
 
@@ -160,22 +184,42 @@ The modular design supports future integration with **Prefect** or **Airflow** f
 ## 🧮 Folder Structure
 
 ```
-Data_Pipeline/
+PantryPilot/
 ├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── alerts/
+│   ├── raw.dvc                    # DVC tracked raw data
+│   ├── processed.dvc              # DVC tracked processed data
+│   ├── alerts.dvc                 # DVC tracked alerts
+│   ├── receipts/                  # CORD receipt dataset
+│   │   ├── cord_dataset/
+│   │   ├── cord_dataset_with_urls.csv
+│   │   └── cord_v2_dataset.csv
+│   ├── scripts/
+│   │   └── synthetic_generate.py  # Synthetic data generator
+│   └── synthetic_data/            # Generated synthetic data
+│       ├── pantrypilot_inventory_u20_i60_shared_ids.csv
+│       └── pantrypilot_purchase_u20_i60_shared_ids.csv
 │
 ├── scripts/
-│   ├── ingest_neon.py
-│   ├── validate_data.py
-│   ├── transform_data.py
-│   ├── update_anomalies.py
-│   └── utils_pint.py
+│   ├── ingest_neon.py            # NeonDB data ingestion
+│   ├── validate_data.py          # Great Expectations validation
+│   ├── transform_data.py         # Data transformation
+│   ├── update_anomalies.py       # Anomaly detection
+│   ├── utils_pint.py             # Unit conversion utilities
+│   ├── config.py                 # Configuration settings
+│   └── receipts/                 # Receipt processing scripts
+│       ├── create_url_csv.py
+│       ├── upload_to_gcs.sh
+│       └── upload_to_neon.py
 │
-├── great_expectations/
-├── reports/
-├── dvc.yaml
+├── DataCard/                      # Model and data documentation
+│   ├── errors-failure.pdf         # Error analysis and failure modes
+│   └── user-needs.pdf             # User requirements and needs analysis
+│
+├── flows/                         # Prefect workflow definitions
+├── great_expectations/            # GE configuration and suites
+├── docs/                          # Documentation
+├── .dvc/                          # DVC configuration
+├── dvc.yaml                       # DVC pipeline definition
 ├── requirements.txt
 └── readme.md
 ```
@@ -202,13 +246,21 @@ Data_Pipeline/
 
 ```bash
 git clone https://github.com/abhikothari091/PantryPilot.git
-cd PantryPilot/Data_Pipeline
+cd PantryPilot
 python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Run Pipeline Stages
+### 2. Generate Synthetic Data (Optional)
+
+```bash
+python data/scripts/synthetic_generate.py
+```
+
+This generates diverse, culturally-unbiased synthetic data including both Western and Non-Western food items to prevent data bias in the model training process.
+
+### 3. Run Pipeline Stages
 
 ```bash
 python -m scripts.ingest_neon
@@ -217,18 +269,18 @@ python -m scripts.transform_data
 python -m scripts.update_anomalies
 ```
 
-### 3. Validate Results
+### 4. Validate Results
 
 * Open HTML report: `great_expectations/uncommitted/data_docs/local_site/index.html`
 * Review summary: `reports/validation_summary.csv`
 
-### 4. Check Alerts
+### 5. Check Alerts
 
 ```bash
 cat data/alerts/alerts.csv
 ```
 
-### 5. Verify DVC Tracking
+### 6. Verify DVC Tracking
 
 ```bash
 dvc status
@@ -256,11 +308,13 @@ This project provided hands-on experience with designing a **real-world, product
 
 **Key Learnings:**
 
-* Great Expectations helped ensure data integrity and schema consistency.
-* DVC enabled reproducible data versioning and efficient storage.
-* Modular design promotes maintainability and future scalability.
-* Transformation logic (using Pint) reinforced data standardization best practices.
-* Building validations that fail intentionally helped demonstrate pipeline robustness.
+* **Data Bias Mitigation:** Synthetic data generation includes diverse cuisines (Western and Non-Western foods) to prevent cultural bias in ML models.
+* **Great Expectations:** Ensured data integrity and schema consistency through automated validation.
+* **DVC:** Enabled reproducible data versioning and efficient storage tracking.
+* **Modular Design:** Promotes maintainability and future scalability across pipeline components.
+* **Transformation Logic:** Using Pint reinforced data standardization best practices for unit conversions.
+* **Intentional Validation Failures:** Demonstrated pipeline robustness and error detection capabilities.
+* **Receipt Processing:** Integrated CORD dataset for real-world receipt image processing.
 
 This pipeline now forms the **foundation** of the larger PantryPilot system, supporting the downstream Recipe Generator and Inventory Forecaster modules.
 

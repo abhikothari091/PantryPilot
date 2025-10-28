@@ -161,16 +161,35 @@ data_pipeline/data/alerts/
 **Commands:**
 
 ```bash
+# Initialize DVC
 dvc init
 git add .dvc .dvcignore
+
+# Configure GCS as remote storage
+dvc remote add -d myremote gs://pantrypilot-dvc-storage/data
+git add .dvc/config
+
+# Track datasets with DVC
 dvc add data_pipeline/data/raw data_pipeline/data/processed data_pipeline/data/alerts
-git commit -m "Track datasets with DVC"
+dvc push  # Upload to GCS
+
+# Commit metadata to Git
+git add raw.dvc processed.dvc alerts.dvc
+git commit -m "Track datasets with DVC and GCS remote"
 ```
+
+**Remote Storage:**
+- **Provider:** Google Cloud Storage (GCS)
+- **Bucket:** `gs://pantrypilot-dvc-storage/data`
+- **Region:** US-CENTRAL1
+- **Authentication:** Application Default Credentials (`gcloud auth application-default login`)
 
 **Verification:**
 
-```
-dvc status → Data and pipelines are up to date.
+```bash
+dvc status     # Check data sync status
+dvc pull       # Download data from GCS
+gcloud storage ls gs://pantrypilot-dvc-storage/data/ --recursive  # View remote files
 ```
 
 ---
@@ -311,7 +330,7 @@ This project provided hands-on experience with designing a **real-world, product
 
 * **Data Bias Mitigation:** Synthetic data generation includes diverse cuisines (Western and Non-Western foods) to prevent cultural bias in ML models.
 * **Great Expectations:** Ensured data integrity and schema consistency through automated validation.
-* **DVC:** Enabled reproducible data versioning and efficient storage tracking.
+* **DVC + GCS:** Enabled reproducible data versioning with Google Cloud Storage as remote backend for efficient team collaboration.
 * **Modular Design:** Promotes maintainability and future scalability across pipeline components.
 * **Transformation Logic:** Using Pint reinforced data standardization best practices for unit conversions.
 * **Intentional Validation Failures:** Demonstrated pipeline robustness and error detection capabilities.
@@ -323,9 +342,10 @@ This pipeline now forms the **foundation** of the larger PantryPilot system, sup
 
 ## 🚀 Future Enhancements
 
-* Integrate Prefect for automated end-to-end orchestration.
-* Configure DVC remote storage (Google Drive / DagsHub).
+* ~~Configure DVC remote storage~~ ✅ **Completed:** Configured GCS (`gs://pantrypilot-dvc-storage/data`)
+* Integrate Prefect for automated end-to-end orchestration (currently using Airflow).
 * Introduce APIs for real-time alerting and dashboarding.
 * Enhance Great Expectations suites with dynamic thresholds and schema evolution.
+* Set up automated DVC push/pull in CI/CD pipeline.
 
 ---

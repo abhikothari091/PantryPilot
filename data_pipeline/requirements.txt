@@ -1,22 +1,27 @@
-# Data Processing
-pandas>=2.0.0
-pint>=0.23
+# Core
+pandas==2.2.2
+numpy==1.26.4
+python-dotenv==1.0.1
 
-# Database
-psycopg2-binary>=2.9.0
+# Database / IO
+SQLAlchemy==2.0.30
+psycopg2-binary==2.9.9
 
-# Data Quality & Validation
-great-expectations>=0.18.0
+# Validation
+great-expectations==0.18.0
 
-# Workflow Orchestration
-prefect>=2.0.0
+# Units / Transform
+pint==0.24.3
 
 # Data Version Control
-dvc>=3.0.0
+dvc==3.63.0
+dvc-gs==3.0.2  # Required for GCS remote storage
 
-# Cloud Storage (for GCS upload)
+# Cloud Storage
 google-cloud-storage>=2.10.0
 
-# Utilities
-python-dotenv>=1.0.0
-pytest
+# Logging / CLI (optional but helpful)
+rich==13.8.0
+
+# Testing
+pytest==8.3.2

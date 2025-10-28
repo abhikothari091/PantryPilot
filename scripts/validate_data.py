@@ -1,8 +1,9 @@
-from great_expectations.data_context import FileDataContext
-from great_expectations.checkpoint import SimpleCheckpoint
 import os
 import csv
 from datetime import datetime
+from scripts.config import RAW_PATH
+from great_expectations.data_context import FileDataContext
+from great_expectations.checkpoint import SimpleCheckpoint
 
 def save_summary(dataset, suite, success):
     """Append validation results to a CSV summary log."""
@@ -13,7 +14,6 @@ def save_summary(dataset, suite, success):
 
 def run_validation():
     context = FileDataContext(context_root_dir="great_expectations")
-    data_path = "data/raw"
 
     datasets = [
         ("inventory.csv", "inventory_suite"),
@@ -27,7 +27,7 @@ def run_validation():
             validations=[
                 {
                     "batch_request": {
-                        "runtime_parameters": {"path": os.path.join(data_path, filename)},
+                        "runtime_parameters": {"path": str(RAW_PATH / filename)},
                         "batch_identifiers": {"default_identifier_name": "default_id"},
                         "datasource_name": "data_dir",
                         "data_connector_name": "default_runtime_data_connector_name",

@@ -1,8 +1,13 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
+
 load_dotenv()
 
-DB_URL = os.getenv("DATABASE_URL")  
-RAW_PATH = "data_pipeline/data/raw/"
-PROCESSED_PATH = "data_pipeline/data/processed/"
-ALERT_PATH = "data_pipeline/data/alerts/"
+BASE_DIR = Path(__file__).resolve().parents[1]
+DATA_DIR = BASE_DIR / "data"
+
+DB_URL = os.getenv("DATABASE_URL")
+RAW_PATH = DATA_DIR / "raw"
+PROCESSED_PATH = DATA_DIR / "processed"
+ALERT_PATH = DATA_DIR / "alerts"

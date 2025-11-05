@@ -4,62 +4,46 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
 venv/
-env/
+.venv/
 ENV/
-.venv
+env/
+
+# Environment
+.env
+.env.local
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
+
+# DVC
+.dvc/config.local
+.dvc/tmp
+
+# Data files - use DVC for versioning
+data/receipts/cord_dataset/train/*.png
+data/receipts/cord_dataset/validation/*.png
+
+# Large CSV files (optional - remove if you want to track them)
+# data/receipts/*.csv
+
+# Airflow
+data_pipeline/airflow/airflow.db
+data_pipeline/airflow/airflow.cfg
+data_pipeline/airflow/logs/
+data_pipeline/airflow/*.pid
+data_pipeline/airflow/*.log
+data_pipeline/airflow/*.err
+data_pipeline/airflow/*.out
+data_pipeline/airflow/webserver_config.py
+
+# Great Expectations (generated files)
+data_pipeline/gx/
 
 # OS
+data_pipeline/data_pipeline_venv
 .DS_Store
 Thumbs.db
-
-# Data files
-*.csv
-*.json
-!config/*.json
-cord_dataset/
-*.png
-*.jpg
-*.jpeg
-
-# Environment variables
-.env
-.env.local
-
-# Logs
-*.log
-logs/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# GCP credentials
-*.json
-!config/.env.example
-credentials/

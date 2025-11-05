@@ -1,0 +1,5 @@
+[core]
+    remote = myremote
+['remote "myremote"']
+    url = gs://pantrypilot-dvc-storage/data
+    projectname = mlops-compute-lab

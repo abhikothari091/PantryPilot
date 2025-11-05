@@ -1,0 +1,32 @@
+# Core
+pandas==2.2.2
+numpy==1.26.4
+python-dotenv==1.0.1
+
+# Database / IO
+SQLAlchemy==1.4.54  # Compatible with Airflow 2.7.3
+psycopg2-binary==2.9.9
+
+# Validation
+great-expectations==0.18.0
+
+# Units / Transform
+pint==0.23
+flexparser>=0.3.1
+
+# Data Version Control
+dvc==3.63.0
+dvc-gs==3.0.2  # Required for GCS remote storage
+
+# Cloud Storage
+google-cloud-storage>=2.10.0
+
+# Logging / CLI (optional but helpful)
+rich==13.8.0
+
+# Testing
+pytest==8.3.2
+
+# Orchestration
+apache-airflow==2.7.3
+flask-session==0.5.0  # Required for Airflow 2.7.3 compatibility

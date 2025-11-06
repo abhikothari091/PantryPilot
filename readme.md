@@ -380,6 +380,8 @@ PantryPilot/
 | Versioning     | **Git**, **DVC**           | Code and data reproducibility  |
 | Monitoring     | **Python scripts**               | Alert generation               |
 | Orchestration  | **Airflow**                      | DAG automation                 |
+| LLM Inference  | **Ollama**, **Llama 3.2**        | Local model serving            |
+| API Framework  | **FastAPI**, **Pydantic**        | REST endpoints & validation    |
 
 ---
 

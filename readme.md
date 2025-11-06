@@ -64,12 +64,14 @@ Neon Database (PostgreSQL)
 **Goal:** Generate realistic, diverse grocery data for testing and development.
 
 **Key Features:**
+
 * **Bias Mitigation:** Includes both Western and Non-Western food items to prevent cultural bias in the dataset
 * **Diverse Food Items:** Rice, kimchi, tofu, soy sauce, ginger, and other Asian staples alongside Western ingredients
 * **Realistic Attributes:** Categories, expiry dates, storage types, nutritional tags, and purchase patterns
 * **Configurable:** 20 users, 50 items per user, 300 purchases per user
 
 **Output:**
+
 * `data_pipeline/data/synthetic_data/pantrypilot_inventory_u20_i60_shared_ids.csv`
 * `data_pipeline/data/synthetic_data/pantrypilot_purchase_u20_i60_shared_ids.csv`
 
@@ -142,7 +144,7 @@ Failures intentionally left to demonstrate detection of data issues.
 | item_name | issue_type | quantity | expiry_date |
 | --------- | ---------- | -------- | ----------- |
 | Milk      | Expired    | 1        | 2025-09-15  |
-| Rice      | Low Stock  | 0.45 kg  | —           |
+| Rice      | Low Stock  | 0.45 kg  | —          |
 
 ---
 
@@ -179,6 +181,7 @@ git commit -m "Track datasets with DVC and GCS remote"
 ```
 
 **Remote Storage:**
+
 - **Provider:** Google Cloud Storage (GCS)
 - **Bucket:** `gs://pantrypilot-dvc-storage/data`
 - **Region:** US-CENTRAL1
@@ -205,6 +208,7 @@ ingest_neon → validate_data → transform_data → detect_anomalies → dvc_st
 ```
 
 **DAG Configuration:**
+
 - **DAG ID:** `pantrypilot_data_pipeline`
 - **Schedule:** Manual trigger (set `schedule_interval="0 6 * * *"` for daily at 6 AM)
 - **Tasks:**
@@ -226,6 +230,96 @@ airflow dags trigger pantrypilot_data_pipeline
 # Enable scheduled runs
 # Edit schedule_interval in pantry_pilot_dag.py
 ```
+
+---
+
+## 🍳 RAG Recipe Generation
+
+**Scripts:** `recipe_endpoints.py`, `model_eval.py`
+**Goal:** Generate personalized recipe recommendations using ingredient inventory with priority-based selection and local LLM inference.
+
+### 🚀 Setup & Installation
+
+#### Prerequisites
+
+1. **Install Ollama**
+
+   ```bash
+   # macOS/Linux
+   curl -fsSL https://ollama.com/install.sh | sh
+
+   # Windows
+   # Download installer from https://ollama.com/download
+   ```
+2. **Pull the Llama model**
+
+   ```bash
+   ollama pull llama3.2:3b-instruct-q4_K_M
+   ```
+3. **Verify Ollama is running**
+
+   ```bash
+   # Check installed models
+   ollama list
+
+   # Test API endpoint
+   curl http://localhost:11434/api/tags
+   ```
+5. **Start the FastAPI server**
+
+   ```bash
+   python recipe_endpoints.py
+   # API runs on http://localhost:8000
+   # Interactive docs at http://localhost:8000/docs
+   ```
+
+### Key Features
+
+* **Priority-based ingredient selection:** Automatically uses older ingredients first (based on `days_in` threshold)
+* **Meal-type awareness:** Adjusts recipes based on time (breakfast/lunch/dinner/snack)
+* **Local LLM inference:** Uses Ollama with Llama 3.2 for privacy and speed
+* **JSON-structured responses:** Standardized recipe format with name, time, ingredients, and steps
+
+### Model Selection
+
+* Evaluated: gemma:2b, llama3.2:3b, phi3, mistral, qwen2.5
+* Selected: `llama3.2:3b-instruct-q4_K_M` for best quality/latency balance
+
+### API Endpoints
+
+* `POST /generate-recipes` - Main recipe generation with priority logic
+* `GET /health` - Ollama connection status
+* `POST /generate-recipes-custom` - Custom priority override
+
+**Input:** `trial_inventory.txt` with 100+ items including quantities and age (`days_in`)
+**Output:** JSON array of recipes prioritizing older ingredients
+
+### Example Request/Response
+
+```json
+// Request | You can also use the sample inventory provided in the model/logs/trial_inventory.txt
+{
+  "inventory": [{"item": "chicken breast", "qty": "1.5kg", "days_in": 4}],
+  "time": "18:30",
+  "priority_threshold": 7,
+  "num_recipes": 3
+}
+
+// Response
+[{
+  "name": "Stir-Fried Chicken",
+  "time": 25,
+  "main_ingredients": ["chicken breast", "bell peppers"],
+  "quick_steps": "Slice chicken, stir-fry with peppers, season"
+}]
+```
+
+### Troubleshooting
+
+* **Ollama not responding:** Ensure Ollama service is running with `ollama serve`
+* **Model not found:** Verify exact model name matches `llama3.2:3b-instruct-q4_K_M`
+* **Port conflicts:** Ollama uses port 11434, FastAPI uses 8000 by default
+* **Slow generation:** First run downloads the model (~2GB), subsequent runs are faster
 
 ---
 
@@ -277,21 +371,22 @@ PantryPilot/
 
 ## 🧰 Tools and Technologies
 
-| Category               | Tool                       | Purpose                        |
-| ---------------------- | -------------------------- | ------------------------------ |
-| Database               | **NeonDB (PostgreSQL)**    | Centralized data storage       |
-| Data Handling          | **pandas**, **SQLAlchemy** | ETL and transformation         |
-| Validation             | **Great Expectations**     | Schema and data quality checks |
-| Transformation         | **Pint**                   | Unit conversions               |
-| Versioning             | **Git**, **DVC**           | Code and data reproducibility  |
-| Monitoring             | **Python scripts**         | Alert generation               |
-| Orchestration          | **Airflow**                | DAG automation                 |
+| Category       | Tool                                   | Purpose                        |
+| -------------- | -------------------------------------- | ------------------------------ |
+| Database       | **NeonDB (PostgreSQL)**          | Centralized data storage       |
+| Data Handling  | **pandas**, **SQLAlchemy** | ETL and transformation         |
+| Validation     | **Great Expectations**           | Schema and data quality checks |
+| Transformation | **Pint**                         | Unit conversions               |
+| Versioning     | **Git**, **DVC**           | Code and data reproducibility  |
+| Monitoring     | **Python scripts**               | Alert generation               |
+| Orchestration  | **Airflow**                      | DAG automation                 |
 
 ---
 
 ## 🚀 Quick Start for TAs
 
 ### Prerequisites
+
 - Python 3.10+
 - Git
 - Access to NeonDB credentials (provided separately)
@@ -345,6 +440,7 @@ airflow dags test pantrypilot_data_pipeline 2025-01-01
 ```
 
 **Expected Output:**
+
 - ✅ All 5 tasks should complete successfully
 - Data files created in `data/raw/`, `data/processed/`, `data/alerts/`
 - Validation report generated in `great_expectations/uncommitted/data_docs/local_site/index.html`
@@ -377,6 +473,7 @@ pytest -q tests
 ```
 
 **Output Locations:**
+
 - Raw data: `data/raw/*.csv`
 - Processed data: `data/processed/*.csv`
 - Alerts: `data/alerts/alerts.csv`
@@ -417,14 +514,14 @@ Visit `http://localhost:8080` to monitor DAG runs visually.
 
 ## 📊 Outputs
 
-| Stage          | Output                            | Description            |
-| -------------- | --------------------------------- | ---------------------- |
-| Ingestion      | `data_pipeline/data/raw/*.csv`   | Raw tables from NeonDB |
-| Validation     | GE HTML report                    | Data quality summary   |
-| Transformation | `data_pipeline/data/processed/*.csv` | Standardized data      |
-| Monitoring     | `data_pipeline/data/alerts/alerts.csv` | Alerts for anomalies   |
+| Stage          | Output                                           | Description            |
+| -------------- | ------------------------------------------------ | ---------------------- |
+| Ingestion      | `data_pipeline/data/raw/*.csv`                 | Raw tables from NeonDB |
+| Validation     | GE HTML report                                   | Data quality summary   |
+| Transformation | `data_pipeline/data/processed/*.csv`           | Standardized data      |
+| Monitoring     | `data_pipeline/data/alerts/alerts.csv`         | Alerts for anomalies   |
 | Logging        | `data_pipeline/reports/validation_summary.csv` | Validation status      |
-| Versioning     | `.dvc` files                      | Data lineage metadata  |
+| Versioning     | `.dvc` files                                   | Data lineage metadata  |
 
 ---
 

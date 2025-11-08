@@ -4,6 +4,7 @@ from typing import List, Optional
 import requests
 import json
 from datetime import datetime
+import os
 
 app = FastAPI()
 
@@ -23,6 +24,11 @@ class RecipeResponse(BaseModel):
     time: int
     main_ingredients: List[str]
     quick_steps: str
+
+class SubmitPreferenceRequest(BaseModel):
+    user_id: str
+    chosen_set: str
+    recipes: List[RecipeResponse]
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "llama3.2:3b-instruct-q4_K_M"
@@ -50,31 +56,37 @@ def determine_meal_type(time_str: str) -> str:
     except:
         return "meal"
 
-def format_prompt(request: RecipeRequest) -> str:
+def format_dual_prompt(request: RecipeRequest) -> str:
     priority_items = calculate_priority_items(request.inventory, request.priority_threshold)
     meal_type = determine_meal_type(request.time)
-    
     all_items = [item.item for item in request.inventory]
-    
-    prompt = f"""Generate exactly {request.num_recipes} {meal_type} recipes for {request.time}.
-    
+
+    prompt = f"""
+    Generate exactly 2 sets of {meal_type} recipes using the ingredients below.
+
     Priority ingredients (use these first - they're older):
     {', '.join(priority_items[:6])}
 
     All available ingredients:
     {', '.join(all_items)}
 
-    IMPORTANT: Return ONLY a valid JSON array with exactly {request.num_recipes} recipes. No other text before or after the JSON.
+    Each set should have exactly {request.num_recipes} recipes.
 
-    [
-    {{"name": "Recipe 1 Name", "time": 30, "main_ingredients": ["ingredient1", "ingredient2", "ingredient3"], "quick_steps": "Step by step cooking instructions in one line"}},
-    {{"name": "Recipe 2 Name", "time": 25, "main_ingredients": ["ingredient1", "ingredient2"], "quick_steps": "Step by step cooking instructions in one line"}},
-    {{"name": "Recipe 3 Name", "time": 35, "main_ingredients": ["ingredient1", "ingredient2", "ingredient3"], "quick_steps": "Step by step cooking instructions in one line"}}
-    ]"""
-    
+    Return only valid JSON like this:
+    {{
+        "Set A": [
+            {{"name": "Recipe 1", "time": 25, "main_ingredients": ["ingredient1","ingredient2"], "quick_steps": "Quick steps..."}},
+            {{"name": "Recipe 2", "time": 30, "main_ingredients": ["ingredient3","ingredient4"], "quick_steps": "Quick steps..."}}
+        ],
+        "Set B": [
+            {{"name": "Recipe 1", "time": 20, "main_ingredients": ["ingredient1","ingredient2"], "quick_steps": "Quick steps..."}},
+            {{"name": "Recipe 2", "time": 35, "main_ingredients": ["ingredient3","ingredient4"], "quick_steps": "Quick steps..."}}
+        ]
+    }}
+    """
     return prompt
 
-def call_ollama(prompt: str) -> list:
+def call_ollama(prompt: str) -> dict:
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
@@ -85,74 +97,67 @@ def call_ollama(prompt: str) -> list:
             "max_tokens": 1000
         }
     }
-    
+
     try:
         response = requests.post(OLLAMA_URL, json=payload, timeout=30)
         response.raise_for_status()
-        
+
         result = response.json()
         response_text = result.get("response", "[]")
-        
+
         if isinstance(response_text, str):
             response_text = response_text.strip()
-            
-            json_start = response_text.find('[')
-            json_end = response_text.rfind(']') + 1
-            
+
+            json_start = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
+
             if json_start != -1 and json_end > json_start:
                 response_text = response_text[json_start:json_end]
-            
+
             try:
                 recipes_json = json.loads(response_text)
             except json.JSONDecodeError:
-                if not response_text.startswith('['):
-                    response_text = f"[{response_text}]"
-                recipes_json = json.loads(response_text)
+                print(f"Failed to parse: {response_text}")
+                raise HTTPException(status_code=500, detail=f"Failed to parse model response.")
         else:
             recipes_json = response_text
-            
+
         if isinstance(recipes_json, dict):
-            recipes_json = [recipes_json]
-        elif not isinstance(recipes_json, list):
-            recipes_json = []
-            
-        return recipes_json
-        
+            set_a = recipes_json.get("Set A", [])
+            set_b = recipes_json.get("Set B", [])
+        else:
+            set_a, set_b = [], []
+
+        return {"Set A": set_a, "Set B": set_b}
+
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Ollama API error: {str(e)}")
     except json.JSONDecodeError as e:
-        print(f"Failed to parse: {result.get('response', 'No response')}")
-        raise HTTPException(status_code=500, detail=f"Failed to parse model response: {str(e)}")
+        print(f"Failed to parse: {response_text}")
+        raise HTTPException(status_code=500, detail="Failed to parse model response.")
 
-@app.post("/generate-recipes", response_model=List[RecipeResponse])
-async def generate_recipes(request: RecipeRequest):
-    prompt = format_prompt(request)
-    
-    try:
-        recipes = call_ollama(prompt)
-        
-        validated_recipes = []
-        for recipe in recipes:
-            if isinstance(recipe, dict):
-                validated_recipes.append(RecipeResponse(
-                    name=recipe.get("name", "Unknown Recipe"),
-                    time=recipe.get("time", 30),
-                    main_ingredients=recipe.get("main_ingredients", []),
-                    quick_steps=recipe.get("quick_steps", "")
-                ))
-        
-        if not validated_recipes:
-            validated_recipes = [RecipeResponse(
-                name="Recipe Generation Failed",
-                time=30,
-                main_ingredients=["Please try again"],
-                quick_steps="The model didn't return valid recipes"
-            )]
-        
-        return validated_recipes
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/generate-recipe-sets")
+async def generate_recipe_sets(request: RecipeRequest):
+    prompt = format_dual_prompt(request)
+    result = call_ollama(prompt)
+    return result
+
+@app.post("/submit-preference")
+async def submit_preference(preference: SubmitPreferenceRequest):
+    data = {
+        "timestamp": datetime.now().isoformat(),
+        "user_id": preference.user_id,
+        "chosen_set": preference.chosen_set,
+        "recipes": [recipe.model_dump() for recipe in preference.recipes]
+    }
+
+    user_data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "user_data")
+    os.makedirs(user_data_path, exist_ok=True)
+
+    with open(f"{user_data_path}/{preference.user_id}_preferences.jsonl", "a") as f:
+        f.write(json.dumps(data) + "\n")
+
+    return {"status": "saved"}
 
 @app.get("/health")
 async def health_check():
@@ -161,33 +166,6 @@ async def health_check():
         return {"status": "healthy", "ollama": "connected"}
     except:
         return {"status": "degraded", "ollama": "disconnected"}
-
-@app.post("/generate-recipes-custom")
-async def generate_recipes_custom(
-    inventory: List[InventoryItem],
-    time: str = "18:00", 
-    priority_items: Optional[List[str]] = None,
-    num_recipes: int = 3
-):
-    meal_type = determine_meal_type(time)
-    
-    if priority_items:
-        priority_text = ', '.join(priority_items)
-    else:
-        priority_items = calculate_priority_items(inventory)
-        priority_text = ', '.join(priority_items[:6])
-    
-    all_items = [item.item for item in inventory]
-    
-    prompt = f"""Generate {num_recipes} {meal_type} recipes.
-    Priority items to use: {priority_text}
-    Available: {', '.join(all_items)}
-
-    Return JSON array:
-    [{{"name": "", "time": 0, "main_ingredients": [], "quick_steps": ""}}]"""
-    
-    recipes = call_ollama(prompt)
-    return recipes
 
 if __name__ == "__main__":
     import uvicorn

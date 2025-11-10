@@ -25,6 +25,7 @@ class RecipeResponse(BaseModel):
     time: int
     main_ingredients: List[str]
     quick_steps: str
+    cuisine: str
 
 class SubmitPreferenceRequest(BaseModel):
     user_id: str

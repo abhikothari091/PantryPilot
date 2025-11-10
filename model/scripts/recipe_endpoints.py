@@ -5,8 +5,9 @@ import requests
 import json
 from datetime import datetime
 import os
+from fastapi import FastAPI
 
-app = FastAPI()
+app = FastAPI(max_request_size=100000000)
 
 class InventoryItem(BaseModel):
     item: str
@@ -75,16 +76,17 @@ def format_dual_prompt(request: RecipeRequest) -> str:
     Return only valid JSON like this:
     {{
         "Set A": [
-            {{"name": "Recipe 1", "time": 25, "main_ingredients": ["ingredient1","ingredient2"], "quick_steps": "Quick steps..."}},
-            {{"name": "Recipe 2", "time": 30, "main_ingredients": ["ingredient3","ingredient4"], "quick_steps": "Quick steps..."}}
+            {{"name": "Recipe 1", "cuisine": "Cuisine", "time": 25, "main_ingredients": ["ingredient1", "ingredient2"], "quick_steps": "Quick steps..."}},
+            {{"name": "Recipe 2", "cuisine": "Cuisine", "time": 30, "main_ingredients": ["ingredient3", "ingredient4"], "quick_steps": "Quick steps..."}}
         ],
         "Set B": [
-            {{"name": "Recipe 1", "time": 20, "main_ingredients": ["ingredient1","ingredient2"], "quick_steps": "Quick steps..."}},
-            {{"name": "Recipe 2", "time": 35, "main_ingredients": ["ingredient3","ingredient4"], "quick_steps": "Quick steps..."}}
+            {{"name": "Recipe 1", "cuisine": "Cuisine", "time": 20, "main_ingredients": ["ingredient1", "ingredient2"], "quick_steps": "Quick steps..."}},
+            {{"name": "Recipe 2", "cuisine": "Cuisine", "time": 35, "main_ingredients": ["ingredient3", "ingredient4"], "quick_steps": "Quick steps..."}}
         ]
     }}
     """
     return prompt
+
 
 def call_ollama(prompt: str) -> dict:
     payload = {

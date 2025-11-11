@@ -1,0 +1,5 @@
+outs:
+- md5: 5f0b96c8debd44417e86535fe5107370
+  size: 557462
+  hash: md5
+  path: synthetic_vietnamese_273.json

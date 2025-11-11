@@ -1,0 +1,5 @@
+outs:
+- md5: 501b89bf97278ae129c8ebdd9b5381aa
+  size: 584899
+  hash: md5
+  path: synthetic_korean_286.json

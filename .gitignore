@@ -47,3 +47,15 @@ data_pipeline/gx/
 data_pipeline/data_pipeline_venv
 .DS_Store
 Thumbs.db
+
+# Model weights
+models/
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+*.npz
+
+# Local caches
+.cache/
+huggingface/

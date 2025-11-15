@@ -1,0 +1,176 @@
+[
+    {
+      "user_inventory": ["tofu", "rice", "bok choy", "soy sauce"],
+      "preference": "vegan",
+      "cuisine": "Chinese",
+      "user_request": "simple weeknight dinner"
+    },
+    {
+      "user_inventory": ["paneer", "tomato", "onion", "spinach", "garam masala"],
+      "preference": "vegetarian",
+      "cuisine": "Indian",
+      "user_request": "high protein curry-style dish"
+    },
+    {
+      "user_inventory": ["tortilla", "black beans", "avocado", "corn"],
+      "preference": "gluten-free",
+      "cuisine": "Mexican",
+      "user_request": "quick lunch wrap or bowl"
+    },
+    {
+      "user_inventory": ["pasta", "olive oil", "tomato", "basil"],
+      "preference": "dairy-free",
+      "cuisine": "Italian",
+      "user_request": "comfort food dinner"
+    },
+    {
+      "user_inventory": ["salmon", "rice", "soy sauce", "ginger"],
+      "preference": "non-veg",
+      "cuisine": "Japanese",
+      "user_request": "simple rice bowl"
+    },
+    {
+      "user_inventory": ["kimchi", "rice", "tofu", "sesame oil"],
+      "preference": "vegan",
+      "cuisine": "Korean",
+      "user_request": "spicy one-pan meal"
+    },
+    {
+      "user_inventory": ["chickpeas", "cucumber", "tomato", "olive oil", "lemon"],
+      "preference": "vegan",
+      "cuisine": "Mediterranean",
+      "user_request": "light lunch salad or bowl"
+    },
+    {
+      "user_inventory": ["bread", "cheddar cheese", "butter", "egg"],
+      "preference": "none",
+      "cuisine": "American",
+      "user_request": "quick breakfast or brunch"
+    },
+    {
+      "user_inventory": ["rice noodles", "tofu", "lime", "peanuts"],
+      "preference": "vegetarian",
+      "cuisine": "Thai",
+      "user_request": "noodle-based dinner"
+    },
+    {
+      "user_inventory": ["pita", "hummus", "cucumber", "tomato", "falafel mix"],
+      "preference": "vegan",
+      "cuisine": "Middle Eastern",
+      "user_request": "handheld wrap-style meal"
+    },
+    {
+      "user_inventory": ["chicken breast", "rice", "broccoli", "soy sauce"],
+      "preference": "non-veg",
+      "cuisine": "Chinese",
+      "user_request": "healthy stir-fry style dinner"
+    },
+    {
+      "user_inventory": ["ground beef", "tortillas", "lettuce", "tomato"],
+      "preference": "non-veg",
+      "cuisine": "Mexican",
+      "user_request": "taco-style dinner"
+    },
+    {
+      "user_inventory": ["lentils", "rice", "spinach", "cumin"],
+      "preference": "vegan",
+      "cuisine": "Indian",
+      "user_request": "one-pot comforting dish"
+    },
+    {
+      "user_inventory": ["quinoa", "black beans", "sweet potato", "avocado"],
+      "preference": "vegan",
+      "cuisine": "none",
+      "user_request": "high fiber bowl for meal prep"
+    },
+    {
+      "user_inventory": ["spaghetti", "parmesan", "olive oil", "garlic"],
+      "preference": "none",
+      "cuisine": "Italian",
+      "user_request": "classic pasta dinner"
+    },
+    {
+      "user_inventory": ["rice", "egg", "frozen mixed vegetables", "soy sauce"],
+      "preference": "none",
+      "cuisine": "Chinese",
+      "user_request": "fast fried rice dinner"
+    },
+    {
+      "user_inventory": ["yogurt", "cucumber", "mint", "garlic"],
+      "preference": "vegetarian",
+      "cuisine": "Middle Eastern",
+      "user_request": "side dish or light snack"
+    },
+    {
+      "user_inventory": ["tofu", "spinach", "nutritional yeast", "pasta"],
+      "preference": "vegan",
+      "cuisine": "Italian",
+      "user_request": "creamy but dairy-free pasta"
+    },
+    {
+      "user_inventory": ["corn tortillas", "cheese", "refried beans", "salsa"],
+      "preference": "vegetarian",
+      "cuisine": "Mexican",
+      "user_request": "baked comfort food"
+    },
+    {
+      "user_inventory": ["oats", "banana", "peanut butter", "cinnamon"],
+      "preference": "vegan",
+      "cuisine": "none",
+      "user_request": "healthy breakfast"
+    },
+    {
+      "user_inventory": ["shrimp", "garlic", "butter", "lemon", "pasta"],
+      "preference": "non-veg",
+      "cuisine": "Italian",
+      "user_request": "date-night style dinner"
+    },
+    {
+      "user_inventory": ["cauliflower", "chickpeas", "tomato paste", "spices"],
+      "preference": "vegan",
+      "cuisine": "Indian",
+      "user_request": "rich curry-style main"
+    },
+    {
+      "user_inventory": ["rice", "soy sauce", "egg", "kimchi"],
+      "preference": "none",
+      "cuisine": "Korean",
+      "user_request": "quick fried rice"
+    },
+    {
+      "user_inventory": ["gluten-free pasta", "olive oil", "zucchini", "cherry tomatoes"],
+      "preference": "gluten-free",
+      "cuisine": "Italian",
+      "user_request": "simple weeknight dinner"
+    },
+    {
+      "user_inventory": ["tofu", "bell pepper", "onion", "corn tortillas"],
+      "preference": "vegan",
+      "cuisine": "Mexican",
+      "user_request": "taco-style meal"
+    },
+    {
+      "user_inventory": ["mozzarella", "tomato", "basil", "balsamic vinegar"],
+      "preference": "vegetarian",
+      "cuisine": "Italian",
+      "user_request": "fresh appetizer or light lunch"
+    },
+    {
+      "user_inventory": ["rice", "miso paste", "tofu", "seaweed"],
+      "preference": "vegan",
+      "cuisine": "Japanese",
+      "user_request": "comforting soup and rice combo"
+    },
+    {
+      "user_inventory": ["white bread", "margarine", "vegetable oil spread"],
+      "preference": "dairy-free",
+      "cuisine": "none",
+      "user_request": "very simple snack or toast"
+    },
+    {
+      "user_inventory": ["eggs", "potato", "onion", "bell pepper"],
+      "preference": "none",
+      "cuisine": "Spanish",
+      "user_request": "tortilla-style brunch dish"
+    }
+  ]

@@ -30,3 +30,5 @@ pytest==8.3.2
 # Orchestration
 apache-airflow==2.7.3
 flask-session==0.5.0  # Required for Airflow 2.7.3 compatibility
+
+transformers>=4.40

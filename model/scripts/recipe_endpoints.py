@@ -17,15 +17,17 @@ class InventoryItem(BaseModel):
 class RecipeRequest(BaseModel):
     inventory: List[InventoryItem]
     time: str = "18:00"
-    priority_threshold: int = 7
+    dietary_preference: str = "non-veg"  # "vegan", "veg", or "nonveg"
     num_recipes: int = 3
 
 class RecipeResponse(BaseModel):
     name: str
-    time: int
-    main_ingredients: List[str]
-    quick_steps: str
+    tag: str
     cuisine: str
+    time: str
+    servings: str 
+    ingredients: List[str]
+    steps: str
 
 class SubmitPreferenceRequest(BaseModel):
     user_id: str
@@ -34,13 +36,6 @@ class SubmitPreferenceRequest(BaseModel):
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "llama3.2:3b-instruct-q4_K_M"
-
-def calculate_priority_items(inventory: List[InventoryItem], threshold: int = 7) -> List[str]:
-    priority = []
-    for item in inventory:
-        if item.days_in >= threshold:
-            priority.append(f"{item.item} ({item.days_in} days)")
-    return sorted(priority, key=lambda x: int(x.split('(')[1].split()[0]), reverse=True)
 
 def determine_meal_type(time_str: str) -> str:
     try:
@@ -59,33 +54,73 @@ def determine_meal_type(time_str: str) -> str:
         return "meal"
 
 def format_dual_prompt(request: RecipeRequest) -> str:
-    priority_items = calculate_priority_items(request.inventory, request.priority_threshold)
     meal_type = determine_meal_type(request.time)
-    all_items = [item.item for item in request.inventory]
+    
+    # Create quantity-aware ingredient list
+    ingredients_with_qty = [
+        f"{item.item}: {item.qty}" for item in request.inventory
+    ]
+    
+    dietary_instructions = {
+        "vegan": "plant-only ingredients (no meat, dairy, eggs, or animal products)",
+        "veg": "vegetarian ingredients (no meat/seafood, but dairy/eggs allowed)",
+        "non-veg": "any ingredients including meat, seafood, and poultry"
+    }
+    
+    diet_constraint = dietary_instructions.get(request.dietary_preference, dietary_instructions["non-veg"])
 
     prompt = f"""
-    Generate exactly 2 sets of {meal_type} recipes using the ingredients below.
+    Generate exactly {request.num_recipes} recipes using the ingredients below. You MUST ONLY output valid JSON. No commentary. No markdown. No text outside JSON.
 
-    Priority ingredients (use these first - they're older):
-    {', '.join(priority_items[:6])}
+    Available ingredients with quantities:
+    {chr(10).join(ingredients_with_qty)}
 
-    All available ingredients:
-    {', '.join(all_items)}
+    CRITICAL CONSTRAINTS:
+    - Use ONLY ingredients from the list above. Do NOT assume availability of any other ingredients.
+    - Recipes must respect available quantities (if inventory has 500g chicken, don't require 1kg).
+    - If common cooking basics (salt, pepper) are not in the list, you MAY assume small amounts are available.
+    - Scale recipes to fit available quantities OR choose different recipes.
+    - DO NOT generate recipes requiring more than available quantities.
 
-    Each set should have exactly {request.num_recipes} recipes.
+    Dietary preference: {request.dietary_preference}
+    Use ONLY {diet_constraint}.
 
-    Return only valid JSON like this:
-    {{
-        "Set A": [
-            {{"name": "Recipe 1", "cuisine": "Cuisine", "time": 25, "main_ingredients": ["ingredient1", "ingredient2"], "quick_steps": "Quick steps..."}},
-            {{"name": "Recipe 2", "cuisine": "Cuisine", "time": 30, "main_ingredients": ["ingredient3", "ingredient4"], "quick_steps": "Quick steps..."}}
-        ],
-        "Set B": [
-            {{"name": "Recipe 1", "cuisine": "Cuisine", "time": 20, "main_ingredients": ["ingredient1", "ingredient2"], "quick_steps": "Quick steps..."}},
-            {{"name": "Recipe 2", "cuisine": "Cuisine", "time": 35, "main_ingredients": ["ingredient3", "ingredient4"], "quick_steps": "Quick steps..."}}
-        ]
-    }}
+    Requirements for each recipe:
+    - Include a "tag" field: use "{request.dietary_preference}" for all recipes. 
+    - Include "generated_at" with the current date and time.
+    - Include a "servings" field: specify how many people this recipe serves (e.g., "2 people", "4 people").
+    - Include a "cuisine" field: specify the COOKING STYLE/ORIGIN, not the ingredient type.
+    Valid examples: "Italian", "Mexican", "Thai", "Indian", "Japanese", "Mediterranean", "American", "Chinese"
+    INVALID examples: "Poultry", "Seafood", "Vegetarian", "Meat" - these are NOT cuisines
+    - "time" must include units ("10m", "45s", "1h", etc.)
+    - "ingredients" must list ALL ingredients used in the recipe with measurements.
+    - Every ingredient mentioned in steps MUST appear in the ingredients array.
+    - Include cooking oils, seasonings, garnishes, and everything else in the ingredients list.
+    - "steps" must contain at least 5 steps, detailed but concise.
+    
+    CRITICAL: The dietary restriction applies to:
+    - All ingredients listed
+    - All cooking ingredients (oils, sauces, broths)
+    - All serving suggestions (bread, rice, sides)
+    - All garnishes and toppings
+    - Everything mentioned in the recipe steps
+
+    Do NOT suggest serving with items that violate the dietary preference.
+
+    Return ONLY valid JSON array in this exact format:
+    [
+        {{
+            "name": "Recipe 1",
+            "tag": "{request.dietary_preference}",
+            "cuisine": "Cuisine",
+            "time": "25m",
+            "servings": "2 people",
+            "ingredients": ["ingredient1 (1 cup)", "ingredient2 (2 tbsp)"],
+            "steps": "Step 1. Step 2. Step 3. Step 4. Step 5."
+        }}
+    ]
     """
+
     return prompt
 
 
@@ -97,47 +132,35 @@ def call_ollama(prompt: str) -> dict:
         "options": {
             "temperature": 0.7,
             "top_p": 0.9,
-            "max_tokens": 1000
+            "max_tokens": 2000,
+            "format": "json"
         }
     }
 
     try:
-        response = requests.post(OLLAMA_URL, json=payload, timeout=30)
+        response = requests.post(OLLAMA_URL, json=payload, timeout=60)
         response.raise_for_status()
 
         result = response.json()
-        response_text = result.get("response", "[]")
 
-        if isinstance(response_text, str):
-            response_text = response_text.strip()
+        if "response" not in result:
+            raise HTTPException(status_code=500, detail="Ollama response missing 'response'.")
 
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}') + 1
+        try:
+            recipes_json = json.loads(result["response"])
+        except json.JSONDecodeError:
+            print("FAILED INPUT:", result["response"])
+            raise HTTPException(status_code=500, detail=f"Failed to decode JSON from model.")
 
-            if json_start != -1 and json_end > json_start:
-                response_text = response_text[json_start:json_end]
-
-            try:
-                recipes_json = json.loads(response_text)
-            except json.JSONDecodeError:
-                print(f"Failed to parse: {response_text}")
-                raise HTTPException(status_code=500, detail=f"Failed to parse model response.")
+        # Expect array of recipes
+        if isinstance(recipes_json, list):
+            return {"recipes": recipes_json}
         else:
-            recipes_json = response_text
-
-        if isinstance(recipes_json, dict):
-            set_a = recipes_json.get("Set A", [])
-            set_b = recipes_json.get("Set B", [])
-        else:
-            set_a, set_b = [], []
-
-        return {"Set A": set_a, "Set B": set_b}
+            return {"recipes": []}
 
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Ollama API error: {str(e)}")
-    except json.JSONDecodeError as e:
-        print(f"Failed to parse: {response_text}")
-        raise HTTPException(status_code=500, detail="Failed to parse model response.")
+
 
 @app.post("/generate-recipe-sets")
 async def generate_recipe_sets(request: RecipeRequest):

@@ -228,9 +228,12 @@ def main():
 
     results: Dict[str, Dict[str, float]] = {}
 
-    # Load ONE model at a time to avoid MPS OOM
     for model_kind in ["base", "lora"]:
         print(f"\n[INFO] Preparing {model_kind} model")
+
+        if model_kind == "lora" and not LORA_ADAPTER_DIR.exists():
+            print(f"[WARN] LoRA adapter dir {LORA_ADAPTER_DIR} not found, skipping lora eval.")
+            continue
 
         # Base model
         if model_kind == "base":

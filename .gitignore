@@ -48,14 +48,15 @@ data_pipeline/data_pipeline_venv
 .DS_Store
 Thumbs.db
 
-# Model weights
+# Model weights / adapters
 models/
 *.safetensors
 *.bin
 *.pt
-*.ckpt
-*.npz
+llama3b_lambda_lora.zip
+
+# HF cache (if someone runs locally)
+.huggingface/
 
 # Local caches
 .cache/
-huggingface/

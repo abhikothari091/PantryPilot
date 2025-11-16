@@ -47,3 +47,16 @@ data_pipeline/gx/
 data_pipeline/data_pipeline_venv
 .DS_Store
 Thumbs.db
+
+# Model weights / adapters
+models/
+*.safetensors
+*.bin
+*.pt
+llama3b_lambda_lora.zip
+
+# HF cache (if someone runs locally)
+.huggingface/
+
+# Local caches
+.cache/

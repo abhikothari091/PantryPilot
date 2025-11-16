@@ -1,0 +1,55 @@
+model,preference,cuisine,n,json_valid_rate,diet_match_rate,constraint_violation_rate,cuisine_match_rate,inventory_coverage_mean
+base,vegan,Chinese,1,1.0,1.0,0.0,1.0,0.75
+base,vegetarian,Indian,1,1.0,1.0,0.0,1.0,0.8
+base,gluten-free,Mexican,1,1.0,1.0,0.0,1.0,0.75
+base,dairy-free,Italian,1,1.0,0.0,1.0,1.0,1.0
+base,non-veg,Japanese,1,1.0,1.0,0.0,1.0,1.0
+base,vegan,Korean,1,1.0,0.0,1.0,1.0,1.0
+base,vegan,Mediterranean,1,1.0,1.0,0.0,1.0,0.6
+base,none,American,1,1.0,1.0,0.0,1.0,0.75
+base,vegetarian,Thai,1,1.0,1.0,0.0,1.0,1.0
+base,vegan,Middle Eastern,1,1.0,1.0,0.0,1.0,1.0
+base,non-veg,Chinese,1,1.0,1.0,0.0,1.0,1.0
+base,non-veg,Mexican,1,1.0,1.0,0.0,1.0,1.0
+base,vegan,Indian,2,1.0,0.5,0.5,1.0,1.0
+base,vegan,none,2,1.0,0.5,0.5,0.5,0.875
+base,none,Italian,1,1.0,0.0,1.0,1.0,1.0
+base,none,Chinese,1,1.0,1.0,0.0,1.0,1.0
+base,vegetarian,Middle Eastern,1,1.0,1.0,0.0,1.0,1.0
+base,vegan,Italian,1,1.0,0.0,1.0,1.0,1.0
+base,vegetarian,Mexican,1,1.0,0.0,1.0,1.0,1.0
+base,non-veg,Italian,1,1.0,1.0,0.0,1.0,0.8
+base,none,Korean,1,1.0,0.0,1.0,1.0,0.75
+base,gluten-free,Italian,1,0.0,,,,
+base,vegan,Mexican,1,1.0,1.0,0.0,1.0,1.0
+base,vegetarian,Italian,1,1.0,1.0,0.0,1.0,1.0
+base,vegan,Japanese,1,1.0,1.0,0.0,1.0,1.0
+base,dairy-free,none,1,1.0,1.0,0.0,1.0,0.6666666666666666
+base,none,Spanish,1,1.0,0.0,1.0,1.0,1.0
+lora,vegan,Chinese,1,1.0,1.0,0.0,1.0,0.5
+lora,vegetarian,Indian,1,1.0,1.0,0.0,1.0,1.0
+lora,gluten-free,Mexican,1,1.0,1.0,0.0,1.0,1.0
+lora,dairy-free,Italian,1,1.0,0.0,1.0,1.0,1.0
+lora,non-veg,Japanese,1,1.0,1.0,0.0,1.0,1.0
+lora,vegan,Korean,1,1.0,1.0,0.0,1.0,1.0
+lora,vegan,Mediterranean,1,1.0,1.0,0.0,1.0,1.0
+lora,none,American,1,1.0,1.0,0.0,1.0,0.75
+lora,vegetarian,Thai,1,1.0,1.0,0.0,1.0,1.0
+lora,vegan,Middle Eastern,1,1.0,1.0,0.0,1.0,1.0
+lora,non-veg,Chinese,1,1.0,1.0,0.0,1.0,1.0
+lora,non-veg,Mexican,1,1.0,1.0,0.0,1.0,1.0
+lora,vegan,Indian,2,1.0,1.0,0.0,1.0,0.875
+lora,vegan,none,2,1.0,1.0,0.0,0.0,1.0
+lora,none,Italian,1,1.0,1.0,0.0,1.0,0.75
+lora,none,Chinese,1,1.0,0.0,1.0,1.0,1.0
+lora,vegetarian,Middle Eastern,1,1.0,1.0,0.0,1.0,0.75
+lora,vegan,Italian,1,1.0,1.0,0.0,1.0,1.0
+lora,vegetarian,Mexican,1,1.0,1.0,0.0,1.0,1.0
+lora,non-veg,Italian,1,1.0,1.0,0.0,1.0,0.8
+lora,none,Korean,1,1.0,1.0,0.0,1.0,0.75
+lora,gluten-free,Italian,1,1.0,1.0,0.0,1.0,1.0
+lora,vegan,Mexican,1,1.0,1.0,0.0,1.0,1.0
+lora,vegetarian,Italian,1,1.0,1.0,0.0,1.0,1.0
+lora,vegan,Japanese,1,1.0,1.0,0.0,1.0,1.0
+lora,dairy-free,none,1,1.0,0.0,1.0,0.0,0.6666666666666666
+lora,none,Spanish,1,1.0,0.0,1.0,1.0,1.0

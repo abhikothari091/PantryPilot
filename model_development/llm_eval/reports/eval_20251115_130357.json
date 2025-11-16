@@ -1,0 +1,16 @@
+{
+  "base_t0.7": {
+    "json_valid_rate": 1.0,
+    "diet_match_rate": 0.42857142857142855,
+    "constraint_violation_rate": 0.5714285714285714,
+    "cuisine_match_rate": 1.0,
+    "inventory_coverage_mean": 0.7029761904761905
+  },
+  "lora_t0.7": {
+    "json_valid_rate": 1.0,
+    "diet_match_rate": 0.7142857142857143,
+    "constraint_violation_rate": 0.2857142857142857,
+    "cuisine_match_rate": 1.0,
+    "inventory_coverage_mean": 0.6717857142857142
+  }
+}

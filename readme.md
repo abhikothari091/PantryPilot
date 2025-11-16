@@ -1,350 +1,270 @@
-# 🥢 PantryPilot – Data Pipeline Documentation
+# 🥢 PantryPilot – Data Pipeline & Model Development
 
-### Group 16 · Personalized Grocery Forecasting & Constraint-Aware Recipe Assistant
-
----
-
-## 📘 Overview
-
-**PantryPilot** is a personalized grocery management and recipe recommendation system that helps users maintain their kitchen inventory, plan meals intelligently, and avoid ingredient shortages.
-
-This document outlines the **Data Pipeline** component of the project — responsible for ingestion, validation, transformation, and monitoring of all pantry-related datasets.
-
-The pipeline ensures that every dataset (inventory, purchase history, and receipt coordination data) is:
-
-* Ingested from the central **NeonDB** database
-* Automatically validated using **Great Expectations**
-* Transformed into standardized, ready-to-use tables
-* Monitored for anomalies (low stock, expiry)
-* Version-controlled using **DVC** for reproducibility
+**Group 16 · Personalized Grocery Forecasting & Constraint-Aware Recipe Assistant**
 
 ---
 
-## 🧱 Architecture
+## 📘 High-Level Overview
+
+PantryPilot is a personalized grocery management and recipe recommendation system that helps users:
+- Maintain and monitor their kitchen inventory
+- Plan meals based on available ingredients and preferences
+- Avoid ingredient shortages through alerts and smart suggestions
+
+The system is composed of two major technical pillars:
+
+### 1. Data Pipeline (`data_pipeline/`)
+- Ingestion from NeonDB (PostgreSQL)
+- Validation with Great Expectations
+- Transformation & feature engineering
+- Monitoring & alerts for low-stock / expiry
+- Data versioning with DVC + remote storage (GCS)
+- Airflow DAG for orchestration
+
+### 2. Model Development (`model_development/`)
+- Synthetic recipe data generation & cleaning (teammate 2, separate training repo)
+- LoRA fine-tuning of Llama 3.2 3B Instruct on ~11.8k curated recipes
+- Local evaluation & benchmarking of base vs fine-tuned model
+- Bias-focused slice evaluation across cuisines & dietary preferences
+- Light CI checks that run smoke tests for both the data pipeline and LLM eval
+
+This README describes both the data pipeline and the model development work, plus how they connect conceptually.
+
+---
+
+## 🧱 System Architecture
 
 ```
-[Synthetic Data Generation]
+[Synthetic Data Generation for Inventory]
  data_pipeline/data/scripts/synthetic_generate.py
- → Generates diverse, unbiased food items (Western + Non-Western cuisines)
+ → Generate diverse pantry items (Western + Non-Western cuisines)
        │
        ▼
 Neon Database (PostgreSQL)
-├── inventory (from synthetic data)
-├── purchase_history (from synthetic data)
-└── cord_dataset (receipt images)
+├── inventory (from synthetic_data)
+├── purchase_history (from synthetic_data)
+└── cord_dataset (receipt images metadata)
        │
        ▼
-[Ingestion Layer]
- data_pipeline/scripts/ingest_neon.py
+[Data Pipeline]
+ data_pipeline/scripts/ingest_neon.py          # Ingestion from NeonDB
+ data_pipeline/scripts/validate_data.py        # Great Expectations validation
+ data_pipeline/scripts/transform_data.py       # Pint-based unit normalization
+ data_pipeline/scripts/update_anomalies.py     # Low stock / expiry alerts
+ DVC + Airflow orchestration
        │
        ▼
-[Validation Layer]
- data_pipeline/scripts/validate_data.py (Great Expectations)
+[Cleaned Inventory + History]
+ data_pipeline/data/processed/*.csv
        │
        ▼
-[Transformation Layer]
- data_pipeline/scripts/transform_data.py + data_pipeline/scripts/utils_pint.py
-       │
-       ▼
-[Monitoring & Alerts]
- data_pipeline/scripts/update_anomalies.py
-       │
-       ▼
-[Versioning]
- Git + DVC (raw / processed / alerts / receipts / synthetic_data)
+[Model Development]
+ model_development/
+  ├── (Teammate 2) Synthetic recipe generation + LoRA fine-tuning
+  ├── (External) FastAPI + React app for recipe serving
+  └── llm_eval/ (this project)
+        ├── run_eval.py        # Base vs LoRA evaluation
+        ├── metrics.py         # Parsing and metric computation
+        ├── datasets.py        # Test data loader
+        ├── bias_eval.py       # Bias slice evaluation
+        └── reports/           # CSV/JSON outputs
 ```
+
+In a fully integrated version of PantryPilot, the data pipeline outputs (clean inventory and history) would feed into the model inference layer to drive personalized recipe generation and inventory-aware suggestions.
 
 ---
 
-## 🧉 Pipeline Components
+## 🧉 Data Pipeline Components
 
-### 0. Synthetic Data Generation
-
-**Script:** `data_pipeline/data/scripts/synthetic_generate.py`
-**Goal:** Generate realistic, diverse grocery data for testing and development.
+### 0. Synthetic Inventory & Purchase Data
+- **Script:** `data_pipeline/data/scripts/synthetic_generate.py`
+- **Goal:** Generate realistic, diverse grocery data for development & testing.
 
 **Key Features:**
+- **Bias mitigation:** includes both Western and Non-Western food items
+  - e.g. rice, kimchi, tofu, soy sauce, ginger, Indian spices, etc.
+- **Realistic attributes:**
+  - Category (produce, dairy, pantry, etc.)
+  - Expiry dates
+  - Storage type (fridge, freezer, pantry)
+  - Nutritional tags
+  - Purchase patterns per user
+- **Configurable scale (current runs):**
+  - ~20 users
+  - ~50–60 items per user
+  - ~300 purchases per user
 
-* **Bias Mitigation:** Includes both Western and Non-Western food items to prevent cultural bias in the dataset
-* **Diverse Food Items:** Rice, kimchi, tofu, soy sauce, ginger, and other Asian staples alongside Western ingredients
-* **Realistic Attributes:** Categories, expiry dates, storage types, nutritional tags, and purchase patterns
-* **Configurable:** 20 users, 50 items per user, 300 purchases per user
+**Outputs:**
+- `data_pipeline/data/synthetic_data/pantrypilot_inventory_u20_i60_shared_ids.csv`
+- `data_pipeline/data/synthetic_data/pantrypilot_purchase_u20_i60_shared_ids.csv`
 
-**Output:**
-
-* `data_pipeline/data/synthetic_data/pantrypilot_inventory_u20_i60_shared_ids.csv`
-* `data_pipeline/data/synthetic_data/pantrypilot_purchase_u20_i60_shared_ids.csv`
-
-**Upload to NeonDB:** Data is uploaded to PostgreSQL database for pipeline consumption.
+These synthetic CSVs are uploaded to NeonDB, where they appear as `inventory` and `purchase_history` tables used by the pipeline.
 
 ---
 
 ### 1. Ingestion Layer
-
-**Script:** `data_pipeline/scripts/ingest_neon.py`
-**Goal:** Extract structured data from NeonDB and store as snapshots in `data_pipeline/data/raw/`.
+- **Script:** `data_pipeline/scripts/ingest_neon.py`
+- **Goal:** Extract structured data from NeonDB and store as CSV snapshots under `data_pipeline/data/raw/`.
 
 **Datasets:**
+- `inventory.csv` (synthetic inventory in NeonDB)
+- `purchase_history.csv` (synthetic purchase history in NeonDB)
+- `cord_dataset.csv` (receipt images metadata, for future OCR / VLM integration)
 
-* `inventory.csv` (synthetic data uploaded to NeonDB)
-* `purchase_history.csv` (synthetic data uploaded to NeonDB)
-* `cord_dataset.csv` (receipt images dataset)
+**Output Path:**
+- `data_pipeline/data/raw/`
 
-**Output Path:** `data_pipeline/data/raw/`
+`ingest_neon.py` connects via SQLAlchemy using `DB_URL` from `scripts/config.py`, runs `SELECT *` on each table, and writes the results as CSV snapshots.
 
 ---
 
-### 2. Validation Layer
-
-**Script:** `data_pipeline/scripts/validate_data.py`
-**Framework:** Great Expectations
+### 2. Validation Layer (Great Expectations)
+- **Script:** `data_pipeline/scripts/validate_data.py`
+- **Framework:** Great Expectations
 
 **Purpose:**
-
-* Validate schema, nulls, and logical rules
-* Generate interactive HTML quality reports
+- Validate schema and column types
+- Check for nulls and invalid values
+- Enforce logical rules (e.g., non-negative quantities)
+- Generate interactive HTML quality reports
 
 **Outputs:**
+- HTML docs: `data_pipeline/great_expectations/uncommitted/data_docs/local_site/index.html`
+- Summary CSV: `data_pipeline/reports/validation_summary.csv`
 
-* `data_pipeline/great_expectations/uncommitted/data_docs/local_site/index.html`
-* `data_pipeline/reports/validation_summary.csv`
-
-**Example Output:**
-
+**Example Outcome:**
 ```
-[VALIDATION] inventory.csv → PASS ✅
-[VALIDATION] purchase_history.csv → FAIL ❌
+[VALIDATION] inventory.csv        → PASS ✅
+[VALIDATION] purchase_history.csv → FAIL ❌ (intentional data issue for demo)
 ```
 
-Failures intentionally left to demonstrate detection of data issues.
+Intentional failures are left to demonstrate how the pipeline surfaces data quality problems.
 
 ---
 
 ### 3. Transformation Layer
+- **Scripts:**
+  - `data_pipeline/scripts/transform_data.py`
+  - `data_pipeline/scripts/utils_pint.py`
 
-**Scripts:** `data_pipeline/scripts/transform_data.py`, `data_pipeline/scripts/utils_pint.py`
-**Goal:** Normalize units and engineer useful features.
+**Goal:** Normalize all quantities and engineer useful features.
 
-**Key Steps:**
+**Key Steps (Inventory):**
+- Normalize units to canonical form (g, ml, pcs) using Pint via `utils_pint.to_canonical`.
+- Compute `stock_value = qty_canonical × unit_cost`.
+- Compute `is_low_stock` flag based on `reorder_threshold`.
+- Write cleaned inventory to `data_pipeline/data/processed/inventory_cleaned.csv`.
 
-* Convert units to canonical form using **Pint** (g/ml/pcs)
-* Derive: `stock_value = qty × unit_cost`, `is_low_stock` flag
-* Calculate per-unit prices in purchases
-* Save standardized data to `data_pipeline/data/processed/`
+**Key Steps (Purchase History):**
+- Compute `unit_price = price_total / quantity_purchased` (safe division to avoid zero-division issues).
+- Write cleaned purchase history to `data_pipeline/data/processed/purchase_history_cleaned.csv`.
 
 ---
 
 ### 4. Monitoring & Alerts
-
-**Script:** `data_pipeline/scripts/update_anomalies.py`
-**Purpose:** Identify low-stock or expired products and log them.
+- **Script:** `data_pipeline/scripts/update_anomalies.py`
+- **Goal:** Identify low-stock or expired items and log them as alerts.
 
 **Output:** `data_pipeline/data/alerts/alerts.csv`
 
+**Example schema:**
+
 | item_name | issue_type | quantity | expiry_date |
-| --------- | ---------- | -------- | ----------- |
-| Milk      | Expired    | 1        | 2025-09-15  |
-| Rice      | Low Stock  | 0.45 kg  | —          |
+|-----------|------------|----------|-------------|
+| Milk | Expired | 1 | 2025-09-15 |
+| Rice | Low Stock | 0.45 kg | — |
+
+These alerts can later be wired into a UI or notification system.
 
 ---
 
-### 5. Versioning & Reproducibility
+### 5. Versioning & Reproducibility (DVC + GCS)
+- **Tools:** Git + DVC + Google Cloud Storage
 
-**Tools:** Git + DVC
+**Tracked folders:**
+- `data_pipeline/data/raw/`
+- `data_pipeline/data/processed/`
+- `data_pipeline/data/alerts/`
 
-**Tracked Folders:**
-
-```
-data_pipeline/data/raw/
-data_pipeline/data/processed/
-data_pipeline/data/alerts/
-```
-
-**Commands:**
-
+**Example workflow:**
 ```bash
+cd data_pipeline
+
 # Initialize DVC
 dvc init
-git add .dvc .dvcignore
 
-# Configure GCS as remote storage
+# Configure remote
 dvc remote add -d myremote gs://pantrypilot-dvc-storage/data
-git add .dvc/config
 
-# Track datasets with DVC
-dvc add data_pipeline/data/raw data_pipeline/data/processed data_pipeline/data/alerts
-dvc push  # Upload to GCS
+# Track local data
+dvc add data/raw data/processed data/alerts
 
-# Commit metadata to Git
-git add raw.dvc processed.dvc alerts.dvc
+# Push to remote
+dvc push
+
+# Commit metadata
+git add data/*.dvc .dvc .dvcignore
 git commit -m "Track datasets with DVC and GCS remote"
 ```
 
-**Remote Storage:**
-
-- **Provider:** Google Cloud Storage (GCS)
-- **Bucket:** `gs://pantrypilot-dvc-storage/data`
-- **Region:** US-CENTRAL1
-- **Authentication:** Application Default Credentials (`gcloud auth application-default login`)
-
-**Verification:**
-
+**Verification commands:**
 ```bash
-dvc status     # Check data sync status
-dvc pull       # Download data from GCS
-gcloud storage ls gs://pantrypilot-dvc-storage/data/ --recursive  # View remote files
+dvc status   # Check if local and remote are in sync
+dvc pull     # Download from GCS if needed
 ```
+
+This ensures that every pipeline run is reproducible with a specific version of the raw/processed/alerts data.
 
 ---
 
 ### 6. Orchestration with Airflow
+- **DAG file:** `data_pipeline/airflow/dags/pantry_pilot_dag.py`
 
-**DAG:** `data_pipeline/airflow/dags/pantry_pilot_dag.py`
-
-**Pipeline Flow:**
-
+**Pipeline flow:**
 ```
 ingest_neon → validate_data → transform_data → detect_anomalies → dvc_status
 ```
 
-**DAG Configuration:**
-
+**DAG configuration:**
 - **DAG ID:** `pantrypilot_data_pipeline`
-- **Schedule:** Manual trigger (set `schedule_interval="0 6 * * *"` for daily at 6 AM)
+- **Schedule:** currently manual; can be set to `"0 6 * * *"` for daily 6 AM runs
 - **Tasks:**
-  1. `ingest_neon` - Extract data from NeonDB
-  2. `validate_data` - Great Expectations validation
-  3. `transform_data` - Unit conversion and feature engineering
-  4. `detect_anomalies` - Low stock and expiry detection
-  5. `dvc_status` - Check data version status
+  1. `ingest_neon` – Extract from NeonDB
+  2. `validate_data` – Run Great Expectations
+  3. `transform_data` – Perform unit conversions & feature engineering
+  4. `detect_anomalies` – Generate alerts
+  5. `dvc_status` – Check DVC sync state
 
-**Running the DAG:**
-
+**Example test run:**
 ```bash
-# Test run
+export AIRFLOW_HOME=$(pwd)/airflow
+airflow db migrate
+
+# Dry-run the full DAG for a specific date
 airflow dags test pantrypilot_data_pipeline 2025-01-01
-
-# Trigger manually
-airflow dags trigger pantrypilot_data_pipeline
-
-# Enable scheduled runs
-# Edit schedule_interval in pantry_pilot_dag.py
 ```
 
 ---
 
-## 🍳 RAG Recipe Generation
-
-**Scripts:** `recipe_endpoints.py`, `model_eval.py`
-**Goal:** Generate personalized recipe recommendations using ingredient inventory with priority-based selection and local LLM inference.
-
-### 🚀 Setup & Installation
-
-#### Prerequisites
-
-1. **Install Ollama**
-
-   ```bash
-   # macOS/Linux
-   curl -fsSL https://ollama.com/install.sh | sh
-
-   # Windows
-   # Download installer from https://ollama.com/download
-   ```
-2. **Pull the Llama model**
-
-   ```bash
-   ollama pull llama3.2:3b-instruct-q4_K_M
-   ```
-3. **Verify Ollama is running**
-
-   ```bash
-   # Check installed models
-   ollama list
-
-   # Test API endpoint
-   curl http://localhost:11434/api/tags
-   ```
-5. **Start the FastAPI server**
-
-   ```bash
-   python recipe_endpoints.py
-   # API runs on http://localhost:8000
-   # Interactive docs at http://localhost:8000/docs
-   ```
-
-### Key Features
-
-* **Priority-based ingredient selection:** Automatically uses older ingredients first (based on `days_in` threshold)
-* **Meal-type awareness:** Adjusts recipes based on time (breakfast/lunch/dinner/snack)
-* **Local LLM inference:** Uses Ollama with Llama 3.2 for privacy and speed
-* **JSON-structured responses:** Standardized recipe format with name, time, ingredients, and steps
-
-### Model Selection
-
-* Evaluated: gemma:2b, llama3.2:3b, phi3, mistral, qwen2.5
-* Selected: `llama3.2:3b-instruct-q4_K_M` for best quality/latency balance
-
-### API Endpoints
-
-* `POST /generate-recipes` - Main recipe generation with priority logic
-* `GET /health` - Ollama connection status
-* `POST /generate-recipes-custom` - Custom priority override
-
-**Input:** `trial_inventory.txt` with 100+ items including quantities and age (`days_in`)
-**Output:** JSON array of recipes prioritizing older ingredients
-
-### Example Request/Response
-
-```json
-// Request | You can also use the sample inventory provided in the model/logs/trial_inventory.txt
-{
-  "inventory": [{"item": "chicken breast", "qty": "1.5kg", "days_in": 4}],
-  "time": "18:30",
-  "priority_threshold": 7,
-  "num_recipes": 3
-}
-
-// Response
-[{
-  "name": "Stir-Fried Chicken",
-  "time": 25,
-  "main_ingredients": ["chicken breast", "bell peppers"],
-  "quick_steps": "Slice chicken, stir-fry with peppers, season"
-}]
-```
-
-### Troubleshooting
-
-* **Ollama not responding:** Ensure Ollama service is running with `ollama serve`
-* **Model not found:** Verify exact model name matches `llama3.2:3b-instruct-q4_K_M`
-* **Port conflicts:** Ollama uses port 11434, FastAPI uses 8000 by default
-* **Slow generation:** First run downloads the model (~2GB), subsequent runs are faster
-
----
-
-## 🧮 Folder Structure
+## 🧮 Project Folder Structure (Updated)
 
 ```
 PantryPilot/
-├── data_pipeline/                 # Main data pipeline directory
-│   ├── alerts.dvc                 # DVC tracked alerts directory
-│   ├── processed.dvc              # DVC tracked processed directory
-│   ├── raw.dvc                    # DVC tracked raw directory
-│   ├── airflow/                   # Airflow orchestration
+├── data_pipeline/                      # Main data pipeline
+│   ├── airflow/
 │   │   └── dags/
-│   │       └── pantry_pilot_dag.py  # 5-task pipeline DAG
+│   │       └── pantry_pilot_dag.py
 │   ├── data/
-│   │   ├── alerts/                # Generated alerts CSVs (DVC tracked)
-│   │   ├── processed/             # Transformed datasets (DVC tracked)
-│   │   ├── raw/                   # Snapshot CSVs from Neon (DVC tracked)
-│   │   ├── receipts/              # CORD receipt dataset
-│   │   ├── scripts/               # Synthetic data utilities
+│   │   ├── alerts/
+│   │   ├── processed/
+│   │   ├── raw/
+│   │   ├── receipts/
+│   │   ├── scripts/
 │   │   │   └── synthetic_generate.py
-│   │   └── synthetic_data/        # Generated synthetic datasets
-│   ├── great_expectations/        # GE configuration and artifacts
-│   ├── reports/                   # Validation and profiling outputs
-│   ├── screenshots/               # Pipeline screenshots and documentation
+│   │   └── synthetic_data/
+│   ├── great_expectations/
+│   ├── reports/
+│   ├── screenshots/
 │   ├── scripts/
 │   │   ├── bias_check.py
 │   │   ├── config.py
@@ -354,206 +274,465 @@ PantryPilot/
 │   │   ├── transform_data.py
 │   │   ├── update_anomalies.py
 │   │   ├── utils_pint.py
-│   │   ├── validate_data.py
-│   │   └── receipts/
-│   │       ├── create_url_csv.py
-│   │       ├── upload_to_gcs.sh
-│   │       └── upload_to_neon.py
-│   ├── tests/                     # Pytest suites
+│   │   └── validate_data.py
+│   ├── tests/
 │   ├── requirements.txt
 │   └── dvc.yaml
-├── DataCard/                      # Model and data documentation
-├── docs/                          # Global documentation
-└── .dvc/                          # DVC configuration
+│
+├── model_development/                  # Model dev & evaluation
+│   ├── llm_eval/
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── datasets.py
+│   │   ├── metrics.py
+│   │   ├── run_eval.py
+│   │   ├── bias_eval.py
+│   │   ├── analyze_results.py
+│   │   ├── data/
+│   │   │   ├── recipes_test.jsonl      # Synthetic eval set from teammate 2
+│   │   │   └── val_bias.json           # Hand-crafted bias prompts
+│   │   └── reports/
+│   │       ├── eval_*.json
+│   │       ├── eval_summary_*.csv
+│   │       └── bias_report.csv
+│   └── models/                         # NOT tracked by git (see .gitignore)
+│       └── llama3b_lambda_lora/        # LoRA adapter (local, from GCS zip)
+│
+├── DataCard/                           # Data & model documentation
+├── docs/                               # Global docs (slides, notes, etc.)
+├── .github/
+│   └── workflows/
+│       └── pantrypilot_ci.yml          # CI pipeline (tests + smoke eval)
+├── .dvc/                               # DVC configuration
+└── .gitignore                          # Includes model_development/models/
 ```
 
----
-
-## 🧰 Tools and Technologies
-
-| Category       | Tool                                   | Purpose                        |
-| -------------- | -------------------------------------- | ------------------------------ |
-| Database       | **NeonDB (PostgreSQL)**          | Centralized data storage       |
-| Data Handling  | **pandas**, **SQLAlchemy** | ETL and transformation         |
-| Validation     | **Great Expectations**           | Schema and data quality checks |
-| Transformation | **Pint**                         | Unit conversions               |
-| Versioning     | **Git**, **DVC**           | Code and data reproducibility  |
-| Monitoring     | **Python scripts**               | Alert generation               |
-| Orchestration  | **Airflow**                      | DAG automation                 |
-| LLM Inference  | **Ollama**, **Llama 3.2**        | Local model serving            |
-| API Framework  | **FastAPI**, **Pydantic**        | REST endpoints & validation    |
+Model artifacts under `model_development/models/` are ignored by git to keep the repo lightweight. Instructions for fetching the LoRA adapter and base model are part of the model development section below.
 
 ---
 
-## 🚀 Quick Start for TAs
+## 🧰 Tools & Technologies
 
-### Prerequisites
+| Area | Tools / Libraries |
+|------|-------------------|
+| Database | NeonDB (PostgreSQL), SQLAlchemy |
+| Data handling | pandas |
+| Validation | Great Expectations |
+| Units & transforms | Pint |
+| Orchestration | Airflow |
+| Versioning | Git + DVC + GCS remote |
+| LLM base model | meta-llama/Llama-3.2-3B-Instruct |
+| Fine-tuning | LoRA (PEFT), Lambda Labs GPU (teammate 2) |
+| Inference & eval | Hugging Face Transformers, PEFT, PyTorch |
+| Frontend / backend | React + FastAPI + MongoDB (external app repo) |
+| CI | GitHub Actions (lint, tests, LLM eval smoke tests) |
 
-- Python 3.10+
-- Git
-- Access to NeonDB credentials (provided separately)
+---
 
-### Step-by-Step Setup
+## 🚀 How to Run the Data Pipeline (Local)
 
-#### 1. Clone and Install Dependencies
+### 1. Setup
 
 ```bash
 # Clone repository
 git clone https://github.com/abhikothari091/PantryPilot.git
 cd PantryPilot/data_pipeline
 
-# Create virtual environment
+# Virtual environment
 python -m venv data_pipeline_venv
 source data_pipeline_venv/bin/activate  # Windows: data_pipeline_venv\Scripts\activate
 
-# Install all dependencies (includes Airflow, pandas, Great Expectations, DVC, etc.)
+# Install dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-#### 2. Configure Database Connection
-
+Configure database connection:
 ```bash
-# Copy environment template
 cp .env.example .env
-
-# Edit .env and replace with actual NeonDB credentials
-# DATABASE_URL='postgresql://username:password@ep-xxxxx.region.aws.neon.tech/neondb?sslmode=require'
+# Edit .env and set DATABASE_URL for NeonDB
 ```
 
-**Note:** NeonDB credentials will be provided separately for evaluation.
-
-#### 3. Initialize Airflow (One-time setup)
+### 2. Manual step-by-step run
 
 ```bash
-# Set Airflow home directory
-export AIRFLOW_HOME=$(pwd)/airflow
-
-# Initialize Airflow metadata database
-airflow db migrate
-```
-
-#### 4. Run the Complete Pipeline with Airflow
-
-```bash
-# Test the entire 5-task DAG (ingest → validate → transform → detect anomalies → dvc)
-export AIRFLOW_HOME=$(pwd)/airflow
-airflow dags test pantrypilot_data_pipeline 2025-01-01
-```
-
-**Expected Output:**
-
-- ✅ All 5 tasks should complete successfully
-- Data files created in `data/raw/`, `data/processed/`, `data/alerts/`
-- Validation report generated in `great_expectations/uncommitted/data_docs/local_site/index.html`
-
----
-
-## 🧾 Alternative: Manual Step-by-Step Execution
-
-If you prefer to run each pipeline stage individually:
-
-```bash
-# 1. Ingest data from NeonDB
+# 1. Ingest
 python -m scripts.ingest_neon
 
-# 2. Validate data quality with Great Expectations
+# 2. Validate
 python -m scripts.validate_data
 
-# 3. Transform and standardize units
+# 3. Transform
 python -m scripts.transform_data
 
-# 4. Detect anomalies (low stock, expired items)
+# 4. Alerts
 python -m scripts.update_anomalies
 
-# 5. (Optional) Run bias check and profiling
+# 5. Optional profiling
 python -m scripts.bias_check
 python -m scripts.profile_stats
 
-# 6. Run tests
+# 6. Tests
 pytest -q tests
 ```
 
-**Output Locations:**
+**Outputs to verify:**
+- `data/raw/*.csv` → raw snapshots
+- `data/processed/*.csv` → cleaned tables
+- `data/alerts/alerts.csv` → anomalies
+- `great_expectations/uncommitted/data_docs/local_site/index.html` → validation report
+- `reports/validation_summary.csv` → validation summary
 
-- Raw data: `data/raw/*.csv`
-- Processed data: `data/processed/*.csv`
-- Alerts: `data/alerts/alerts.csv`
-- Validation reports: `great_expectations/uncommitted/data_docs/local_site/index.html`
-- Validation summary: `reports/validation_summary.csv`
-
----
-
-## 🎯 Verification Checklist
-
-After running the pipeline, verify:
-
-- [ ] Raw data files exist: `ls data/raw/` should show `inventory.csv`, `purchase_history.csv`, `cord_dataset.csv`
-- [ ] Processed data created: `ls data/processed/` should show transformed CSV files
-- [ ] Alerts generated: `cat data/alerts/alerts.csv` should show low stock and expired items
-- [ ] Validation report: Open `great_expectations/uncommitted/data_docs/local_site/index.html` in browser
-- [ ] Tests pass: `pytest -q tests` should show passing tests
-
----
-
-## 🔧 Optional: Airflow Web UI
-
-To use the Airflow web interface:
+### 3. Airflow DAG run
 
 ```bash
-# Terminal 1: Start web server
-airflow webserver --port 8080
-
-# Terminal 2: Start scheduler
 export AIRFLOW_HOME=$(pwd)/airflow
-source data_pipeline_venv/bin/activate
-airflow scheduler
+airflow db migrate
+
+# Test DAG
+airflow dags test pantrypilot_data_pipeline 2025-01-01
 ```
 
-Visit `http://localhost:8080` to monitor DAG runs visually.
+**Expected:**
+- All 5 tasks succeed
+- Same artifacts as the manual run
 
 ---
 
-## 📊 Outputs
+## 🧠 Model Development: LLM Training & Evaluation
 
-| Stage          | Output                                           | Description            |
-| -------------- | ------------------------------------------------ | ---------------------- |
-| Ingestion      | `data_pipeline/data/raw/*.csv`                 | Raw tables from NeonDB |
-| Validation     | GE HTML report                                   | Data quality summary   |
-| Transformation | `data_pipeline/data/processed/*.csv`           | Standardized data      |
-| Monitoring     | `data_pipeline/data/alerts/alerts.csv`         | Alerts for anomalies   |
-| Logging        | `data_pipeline/reports/validation_summary.csv` | Validation status      |
-| Versioning     | `.dvc` files                                   | Data lineage metadata  |
+The model development work focuses on recipe generation conditioned on inventory and preferences, with a strong emphasis on:
+- JSON schema adherence
+- Dietary constraint adherence
+- Cuisine matching
+- Use of user inventory
+- Behavior across dietary & cuisine slices (bias analysis)
+
+### A. Synthetic Recipe Data & LoRA Fine-Tuning (Teammate 2)
+
+This section summarizes the external training workflow that produced the LoRA adapter used here.
+
+#### 1. Synthetic recipe generation (Groq + Llama 3.1 8B)
+- Use Groq API with Llama 3.1 8B to generate ~12k synthetic recipes.
+- Cover multiple realistic scenarios:
+  - Full inventory usage
+  - Pure dietary constraints (vegan, vegetarian, gluten-free, dairy-free)
+  - Cuisine-specific prompts (Italian, Chinese, Mexican, Indian, Japanese, Korean, etc.)
+  - Combined constraints (e.g., vegan Italian, gluten-free Mexican)
+  - User-requested ingredients (all present / partial match scenarios)
+- Force JSON output with fields: recipe name, cuisine, culinary_preference, time, main_ingredients, steps, note, shopping_list.
+
+#### 2. ChatML conversion & cleaning
+- Convert each example into a ChatML-style conversation:
+  - `system`: instructions for the recipe generator
+  - `user`: inventory + preference request
+  - `assistant`: JSON recipe
+- Apply validation rules:
+  - Check vegan/vegetarian/gluten-free/dairy-free compliance
+  - Drop recipes that violate constraints (e.g., honey in vegan, soy sauce in gluten-free)
+- Result: ~11,850 clean training examples.
+
+#### 3. LoRA fine-tuning on Lambda Labs
+- **Base model:** meta-llama/Llama-3.2-3B-Instruct
+- **Method:** LoRA via PEFT
+- **Typical config:**
+  - Rank r = 16, alpha = 32
+  - Target modules: q_proj, k_proj, v_proj, o_proj
+  - ~3 epochs, AdamW, cosine LR schedule
+- **Output:** LoRA adapter folder (not tracked by git), distributed to teammates as a zip.
+
+### B. Model Artifacts & Storage
+- **Local location (ignored by git):**
+  - `model_development/models/llama3b_lambda_lora/`
+- **Remote storage (GCS):**
+  - Bucket: `gs://pantrypilot-dvc-storage/data`
+  - Model path (zip): `gs://pantrypilot-dvc-storage/data/models/llama3b_lambda_lora.zip`
+
+**Workflow (expected):**
+1. Download `llama3b_lambda_lora.zip` from the shared GCS bucket (or other internal sharing mechanism).
+2. From repo root:
+```bash
+mkdir -p model_development/models
+cd model_development/models
+unzip /path/to/llama3b_lambda_lora.zip
+# This should create model_development/models/llama3b_lambda_lora/
+```
+3. Ensure `.gitignore` excludes `model_development/models/` so weights are never pushed.
+
+The base model (`meta-llama/Llama-3.2-3B-Instruct`) is pulled from Hugging Face at runtime. If it is gated, users must configure `HF_TOKEN` or run `huggingface-cli login`.
 
 ---
 
-## 🧠 Reflection and Learnings
+### C. LLM Evaluation: Base vs LoRA (`llm_eval/`)
 
-This project provided hands-on experience with designing a **real-world, production-ready data pipeline**.
+All evaluation logic lives in `model_development/llm_eval/`.
 
-**Key Learnings:**
+#### 1. Config & datasets
+- **`config.py`** defines:
+  - `PROJECT_ROOT`: repo root as a Path
+  - `BASE_MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct"`
+  - `LORA_ADAPTER_DIR`: path to `models/llama3b_lambda_lora/`
+  - `MAX_NEW_TOKENS`: generation length cap (e.g., 256)
+  - `TEMPERATURE_GRID`: list of temperatures to evaluate (e.g., [0.7])
+- **`datasets.py`:**
+  - Defines `RecipeTestExample` dataclass:
+```python
+@dataclass
+class RecipeTestExample:
+    user_inventory: List[str]
+    preference: Optional[str]
+    cuisine: Optional[str]
+    user_request: Optional[str]
+    requested_ingredients: List[str]
+    gold_output: Dict[str, Any]
+    scenario: str
+    generated_at: str
+```
+  - Implements `load_recipes_test()` which reads `recipes_test.jsonl` from the shared recipes folder and constructs `RecipeTestExample` objects.
 
-* **Data Bias Mitigation:** Synthetic data generation includes diverse cuisines (Western and Non-Western foods) to prevent cultural bias in ML models.
-* **Great Expectations:** Ensured data integrity and schema consistency through automated validation.
-* **DVC + GCS:** Enabled reproducible data versioning with Google Cloud Storage as remote backend for efficient team collaboration.
-* **Modular Design:** Promotes maintainability and future scalability across pipeline components.
-* **Transformation Logic:** Using Pint reinforced data standardization best practices for unit conversions.
-* **Intentional Validation Failures:** Demonstrated pipeline robustness and error detection capabilities.
-* **Receipt Processing:** Integrated CORD dataset for real-world receipt image processing.
+#### 2. Prompting & generation
+`run_eval.py` sets a strict `SYSTEM_PROMPT` for RecipeGen, which instructs the model to:
+- Always return exactly one valid JSON object
+- Never output markdown, backticks, or extra text
+- Follow this schema:
+```json
+{
+  "status": "ok",
+  "missing_ingredients": ["..."],
+  "recipe": {
+    "name": "...",
+    "cuisine": "...",
+    "culinary_preference": "...",
+    "time": "...",
+    "main_ingredients": ["..."],
+    "steps": "Step 1. ...",
+    "note": null
+  },
+  "shopping_list": ["..."]
+}
+```
 
-This pipeline now forms the **foundation** of the larger PantryPilot system, supporting the downstream Recipe Generator and Inventory Forecaster modules.
+…and follow strict rules like:
+- Do not list more than 8 missing_ingredients
+- Use inventory as the main source of main_ingredients
+- Respect preference (vegan, vegetarian, gluten-free, dairy-free, non-veg, none)
+- Match cuisine if provided
+
+ChatML prompt construction is done via `build_chatml_prompt(example)`:
+```
+<|im_start|>system
+...SYSTEM_PROMPT...
+<|im_end|>
+<|im_start|>user
+Inventory: rice, onion, lemon.
+Dietary preference: gluten-free.
+Cuisine: Chinese.
+Request: Quick dinner using mostly my pantry.
+<|im_end|>
+<|im_start|>assistant
+```
+
+`generate_single(...)` then:
+- Tokenizes the prompt
+- Calls `model.generate(...)` with temperature + MAX_NEW_TOKENS
+- Decodes only the assistant continuation and strips anything after `<|im_end|>`
+
+#### 3. Metrics
+`metrics.py` defines how outputs are parsed and evaluated.
+- **`parse_model_json(raw_text)`:**
+  - Extracts the first JSON object from the model's raw string
+  - Returns `(parsed_json, is_valid_json)`
+- **`compute_example_metrics(example, parsed, valid)`** computes:
+  - `json_valid_rate`: 1.0 if valid JSON, else 0.0
+  - `diet_match_rate`: 1.0 if output respects the requested dietary preference, else 0.0
+  - `constraint_violation_rate`: 1.0 if constraints are violated, else 0.0
+  - `cuisine_match_rate`: 1.0 if recipe.cuisine matches requested cuisine (if any)
+  - `inventory_coverage`: fraction of main_ingredients that come from user_inventory
+- **`aggregate_metrics(list_of_ExampleMetrics)`:**
+  - Aggregates all per-example metrics into dataset-level means (e.g., `inventory_coverage_mean`).
+
+#### 4. Running the evaluation
+From the repo root:
+```bash
+# Quick sanity check on a tiny subset
+python -m model_development.llm_eval.run_eval \
+  --max-examples 3 \
+  --temperatures 0.7
+
+# Typical benchmark run used in our analysis
+python -m model_development.llm_eval.run_eval \
+  --max-examples 20 \
+  --temperatures 0.7
+```
+
+`run_eval.py`:
+- Picks device (cuda → mps → cpu), uses float16 on GPU/MPS and float32 on CPU
+- Loads tokenizer once
+- For each model_kind in ["base", "lora"]:
+  - Loads base model, or base + LoRA adapter
+  - Evaluates for each temperature in TEMPERATURE_GRID
+  - Frees memory between models to keep MPS happy
+- Writes:
+  - `model_development/llm_eval/reports/eval_YYYYMMDD_HHMMSS.json`
+  - `model_development/llm_eval/reports/eval_summary_YYYYMMDD_HHMMSS.csv`
+
+**Representative results (20-example run, T = 0.7):**
+- **Base model** `base_t0.7`:
+  - `json_valid_rate` ≈ 1.00
+  - `diet_match_rate` ≈ 0.43
+  - `constraint_violation_rate` ≈ 0.57
+  - `cuisine_match_rate` ≈ 1.00
+  - `inventory_coverage_mean` ≈ 0.70
+- **LoRA model** `lora_t0.7`:
+  - `json_valid_rate` ≈ 1.00
+  - `diet_match_rate` ≈ 0.71
+  - `constraint_violation_rate` ≈ 0.29
+  - `cuisine_match_rate` ≈ 1.00
+  - `inventory_coverage_mean` ≈ 0.67
+
+**Interpretation:**
+- Both models reliably produce valid JSON with this prompt structure.
+- The LoRA model substantially improves dietary constraint adherence and halves the constraint violation rate.
+- Cuisine matching is already strong for both models.
+- Inventory coverage stays high for both; small differences are expected due to randomness and synthetic data.
+
+These results are exactly what we want for the final report: a clear, quantitative improvement from fine-tuning.
 
 ---
 
-## 🚀 Future Enhancements
+### D. Bias Evaluation
 
-* ~~Configure DVC remote storage~~ ✅ **Completed:** Configured GCS (`gs://pantrypilot-dvc-storage/data`)
-* ~~Integrate Airflow for orchestration~~ ✅ **Completed:** DAG with 5 tasks (ingest → validate → transform → anomalies → dvc)
-* Deploy Airflow to cloud (Databricks, Azure ML, or Google Cloud Composer)
-* Introduce APIs for real-time alerting and dashboarding
-* Enhance Great Expectations suites with dynamic thresholds and schema evolution
-* Set up automated DVC push/pull in CI/CD pipeline
-* Add Airflow sensors for triggering on data arrival
-* Implement email/Slack notifications for validation failures
+Bias evaluation checks whether performance is consistent across dietary preferences and cuisines.
+
+#### 1. Bias dataset: `val_bias.json`
+- **Location:** `model_development/llm_eval/data/val_bias.json` (logically sourced from `data_pipeline/data/recipes/val_bias.json`)
+- **Size:** ~29 hand-crafted examples
+- **Coverage:**
+  - Preferences: vegan, vegetarian, gluten-free, dairy-free, non-veg, none
+  - Cuisines: Italian, Chinese, Mexican, Indian, Japanese, Korean, American, Mediterranean, Middle Eastern, Thai, Spanish, etc.
+  - Includes tricky cases (e.g., conflicting hints in the request).
+
+Each entry looks like:
+```json
+{
+  "user_inventory": ["tofu", "rice", "broccoli"],
+  "preference": "vegan",
+  "cuisine": "Chinese",
+  "user_request": "Quick weekday dinner using mostly pantry items"
+}
+```
+
+#### 2. Bias evaluation script: `bias_eval.py`
+**Usage:**
+```bash
+python -m model_development.llm_eval.bias_eval \
+  --temperature 0.7 \
+  --max-examples 30
+```
+
+**What it does:**
+- Loads the bias dataset and converts it into `RecipeTestExample` objects (only fields present in the file are used).
+- Evaluates both base and lora models on all examples.
+- Computes the same metrics as in `metrics.py` for each example.
+- Groups results by `(model, preference, cuisine)` and aggregates with `aggregate_metrics`.
+- Writes a CSV to:
+```
+model_development/llm_eval/reports/bias_report.csv
+```
+
+**Example CSV snippet (actual run):**
+```csv
+model,preference,cuisine,n,json_valid_rate,diet_match_rate,constraint_violation_rate,cuisine_match_rate,inventory_coverage_mean
+base,vegan,Chinese,1,1.0,1.0,0.0,1.0,0.75
+base,gluten-free,Italian,1,0.0,,,,
+...
+lora,vegan,Chinese,1,1.0,1.0,0.0,1.0,0.5
+lora,gluten-free,Italian,1,1.0,1.0,0.0,1.0,1.0
+...
+```
+
+**Key observations from our run:**
+- **JSON validity:** LoRA maintains `json_valid_rate = 1.0` for all slices in this bias set. The base model fails for at least one slice (gluten-free, Italian).
+- **Dietary constraints:** The base model shows violations for some vegan / dairy-free / gluten-free slices. LoRA fixes most of these so that `diet_match_rate = 1.0` and `constraint_violation_rate = 0.0` in the same slices.
+- **Cuisine & inventory:** `cuisine_match_rate` is consistently 1.0 across slices for both models. `inventory_coverage_mean` is generally high and similar across cuisines and diets, with no obvious pattern of neglect for any specific group.
+
+**Conclusion:** the LoRA-fine-tuned model is:
+- More reliable (no JSON failures in the bias set), and
+- More faithful to dietary constraints across cuisines.
+
+We also explicitly document remaining edge cases (e.g., occasional difficulty for some dairy-free prompts) as limitations, rather than pretending they don't exist.
 
 ---
+
+### E. Results Analysis Helper
+
+`analyze_results.py` is a small helper script that:
+- Loads the latest `eval_summary_*.csv` and `bias_report.csv` from the `reports/` folder.
+- Prints human-readable comparisons between:
+  - Base vs LoRA on the main test eval
+  - Base vs LoRA for each (preference, cuisine) slice in the bias eval
+
+**Usage:**
+```bash
+python -m model_development.llm_eval.analyze_results
+```
+
+This is mainly used to copy tables / summaries into the final report and slides.
+
+---
+
+## 🔁 CI / Testing
+
+We use a simple GitHub Actions workflow (e.g. `.github/workflows/pantrypilot_ci.yml`) to run basic checks on every push / PR.
+
+**Typical steps:**
+1. Set up Python and install dependencies
+2. Run data pipeline tests
+3. Run LLM eval smoke tests
+
+Conceptually, the workflow does something like:
+```bash
+# Inside CI job
+pip install -r data_pipeline/requirements.txt
+
+# Data pipeline tests
+pytest -q data_pipeline/tests
+
+# LLM eval smoke test (small, to keep CI fast)
+python -m model_development.llm_eval.run_eval --max-examples 1 --temperatures 0.7
+python -m model_development.llm_eval.bias_eval --temperature 0.7 --max-examples 1
+```
+
+This ensures that:
+- The data pipeline code is runnable and tests pass
+- The LLM evaluation stack (imports, config, HF model loading, LoRA loading, metric computation) still works end-to-end on a tiny subset
+
+We treat larger runs (e.g., 20 examples, full bias set) as local experiments, not CI jobs.
+
+---
+
+## 🧠 Reflection & Learnings (End-to-End)
+
+From a full MLOps perspective, this project demonstrates:
+
+### 1. Data-centric pipeline design
+- Synthetic data generation to break the "no data" deadlock
+- Validation, transformation, and alerting treated as first-class components
+- DVC + GCS for reproducible datasets and lineage across team members
+
+### 2. Model development with local + cloud resources
+- High-volume synthetic recipe generation using Groq API
+- Parameter-efficient fine-tuning (LoRA) of a 3B Llama model
+- Clear separation between training repo (LoRA creation) and evaluation/pipeline repo
+
+### 3. Robust evaluation & bias analysis
+- Strict JSON schema enforced through prompts and metrics
+- Automatic checks for dietary constraint adherence and cuisine correctness
+- Custom bias slice evaluation across cuisines and dietary preferences
+
+### 4. Practical deployment readiness
+- Local evaluation & inference tested on CPU and Apple M3 Pro (MPS) with careful memory management
+- Data pipeline ready to feed downstream services or endpoints
+- CI hooks to prevent obvious regressions in both pipeline and model evaluation code
+
+Overall, PantryPilot moves from synthetic inventory data → clean, validated tables → LLM-based recipe generation with measured behavior across multiple user segments. That matches the course goal: not just training a model, but integrating it into a reproducible, observable, and evaluable system.

@@ -109,6 +109,5 @@
     {"item": "cocoa powder", "qty": "200g", "days_in": 150}
   ],
   "time": "18:30",
-  "priority_threshold": 7,
   "num_recipes": 3
 }

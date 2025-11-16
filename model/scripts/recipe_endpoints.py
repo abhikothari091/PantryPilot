@@ -7,7 +7,44 @@ from datetime import datetime
 import os
 from fastapi import FastAPI
 
+import torch
+from model.scripts.reward_model import RewardModel, RecipeEmbedder, PreferenceDataset, predict_best_recipe
+
 app = FastAPI(max_request_size=100000000)
+
+# Global variables for reward model
+REWARD_MODEL_PATH = os.path.join(
+    os.path.dirname(__file__), # This script's directory
+    '..', 'backend', 'reward_model.pth' 
+)
+reward_model_global = None
+embedder_global = None
+dummy_dataset_global = None # For accessing formatter
+
+def load_reward_model_globals():
+    global reward_model_global, embedder_global, dummy_dataset_global
+    if reward_model_global is None:
+        print("Loading SentenceTransformer and RewardModel globally...")
+        embedder_global = RecipeEmbedder()
+        embedding_dim = embedder_global.model.get_sentence_embedding_dimension()
+        
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        reward_model_global = RewardModel(input_dim=embedding_dim * 2)
+        
+        if os.path.exists(REWARD_MODEL_PATH):
+            reward_model_global.load_state_dict(torch.load(REWARD_MODEL_PATH, map_location=device))
+            reward_model_global.to(device)
+            reward_model_global.eval()
+            print("RewardModel loaded successfully.")
+        else:
+            print(f"WARNING: Reward model not found at {REWARD_MODEL_PATH}. Re-ranking will not be performed.")
+            reward_model_global = None # Ensure it's None if not found
+        
+        dummy_dataset_global = PreferenceDataset([]) # For accessing formatter
+    return reward_model_global, embedder_global, dummy_dataset_global
+
+# Call this function when the app starts
+load_reward_model_globals()
 
 class InventoryItem(BaseModel):
     item: str
@@ -33,6 +70,7 @@ class SubmitPreferenceRequest(BaseModel):
     user_id: str
     chosen_set: str
     recipes: List[RecipeResponse]
+    request: RecipeRequest
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "llama3.2:3b-instruct-q4_K_M"
@@ -130,7 +168,7 @@ def call_ollama(prompt: str) -> dict:
         "prompt": prompt,
         "stream": False,
         "options": {
-            "temperature": 0.7,
+            "temperature": 0.9,
             "top_p": 0.9,
             "max_tokens": 2000,
             "format": "json"
@@ -166,6 +204,34 @@ def call_ollama(prompt: str) -> dict:
 async def generate_recipe_sets(request: RecipeRequest):
     prompt = format_dual_prompt(request)
     result = call_ollama(prompt)
+    
+    generated_recipes = result.get("recipes", [])
+
+    if reward_model_global and generated_recipes:
+        print("Re-ranking recipes using reward model...")
+        
+        scored_recipes = []
+        with torch.no_grad():
+            for recipe in generated_recipes:
+                request_text = dummy_dataset_global.formatter(recipe={}, request=request.model_dump())
+                recipe_text = dummy_dataset_global.formatter(recipe=recipe, request=request.model_dump())
+                
+                request_embedding = embedder_global.embed([request_text]).to(embedder_global.device)
+                recipe_embedding = embedder_global.embed([recipe_text]).to(embedder_global.device)
+                
+                combined_embedding = torch.cat((request_embedding, recipe_embedding), dim=1)
+                score = reward_model_global(combined_embedding).item()
+                scored_recipes.append((score, recipe))
+        
+        # Sort by score in descending order
+        scored_recipes.sort(key=lambda x: x[0], reverse=True)
+        
+        # Create a new list with score and recipe
+        scored_and_ranked_recipes = [{"score": score, "recipe": recipe} for score, recipe in scored_recipes]
+        
+        result["recipes"] = scored_and_ranked_recipes
+        print("Recipes re-ranked with scores.")
+
     return result
 
 @app.post("/submit-preference")
@@ -174,7 +240,8 @@ async def submit_preference(preference: SubmitPreferenceRequest):
         "timestamp": datetime.now().isoformat(),
         "user_id": preference.user_id,
         "chosen_set": preference.chosen_set,
-        "recipes": [recipe.model_dump() for recipe in preference.recipes]
+        "recipes": [recipe.model_dump() for recipe in preference.recipes],
+        "request": preference.request.model_dump()
     }
 
     user_data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "user_data")

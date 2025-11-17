@@ -444,20 +444,27 @@ This section summarizes the external training workflow that produced the LoRA ad
 ### B. Model Artifacts & Storage
 - **Local location (ignored by git):**
   - `model_development/models/llama3b_lambda_lora/`
-- **Remote storage (GCS):**
-  - Bucket: `gs://pantrypilot-dvc-storage/data`
-  - Model path (zip): `gs://pantrypilot-dvc-storage/data/models/llama3b_lambda_lora.zip`
+- **Remote storage (Google Cloud Storage):**
+  - Bucket: `gs://recipegen-llm-models/`
+  - Region: `us-central1`
+  - Total size: ~52 MB
 
-**Workflow (expected):**
-1. Download `llama3b_lambda_lora.zip` from the shared GCS bucket (or other internal sharing mechanism).
-2. From repo root:
+**Download Instructions:**
+
 ```bash
-mkdir -p model_development/models
-cd model_development/models
-unzip /path/to/llama3b_lambda_lora.zip
-# This should create model_development/models/llama3b_lambda_lora/
+# Authenticate with GCP (if not already authenticated)
+gcloud auth login
+
+# Download model from GCS
+gcloud storage cp -r gs://recipegen-llm-models/llama3b_lambda_lora ./model_development/models/
+
+# Verify download
+ls -lh model_development/models/llama3b_lambda_lora/
 ```
-3. Ensure `.gitignore` excludes `model_development/models/` so weights are never pushed.
+
+**Important:**
+- Ensure `.gitignore` excludes `model_development/models/` so weights are never pushed to git
+- No manual extraction needed - model downloads directly to the correct location
 
 The base model (`meta-llama/Llama-3.2-3B-Instruct`) is pulled from Hugging Face at runtime. If it is gated, users must configure `HF_TOKEN` or run `huggingface-cli login`.
 

@@ -280,6 +280,26 @@ PantryPilot/
 │   └── dvc.yaml
 │
 ├── model_development/                  # Model dev & evaluation
+│   ├── training_pipeline/             # Recipe training data generation (teammate 2)
+│   │   ├── 01_synthetic_generation/
+│   │   │   ├── generate_synthetic_recipes_groq.py
+│   │   │   ├── SCENARIOS.md
+│   │   │   └── README.md
+│   │   ├── 02_chat_conversion/
+│   │   │   ├── convert_to_chat_format.py
+│   │   │   └── README.md
+│   │   ├── 03_validation/
+│   │   │   ├── validate_dietary_constraints.py
+│   │   │   ├── clean_training_data.py
+│   │   │   └── README.md
+│   │   ├── 04_training/
+│   │   │   ├── lambda_finetune_llama3b.ipynb
+│   │   │   ├── lora_config_v3.yaml
+│   │   │   └── LAMBDA_LABS_SETUP_GUIDE.md
+│   │   └── data/                      # Training data (from GCS)
+│   │       ├── synthetic/
+│   │       ├── chat_format/
+│   │       └── cleaned/
 │   ├── llm_eval/
 │   │   ├── __init__.py
 │   │   ├── config.py
@@ -296,7 +316,7 @@ PantryPilot/
 │   │       ├── eval_summary_*.csv
 │   │       └── bias_report.csv
 │   └── models/                         # NOT tracked by git (see .gitignore)
-│       └── llama3b_lambda_lora/        # LoRA adapter (local, from GCS zip)
+│       └── llama3b_lambda_lora/        # LoRA adapter (local, from GCS)
 │
 ├── DataCard/                           # Data & model documentation
 ├── docs/                               # Global docs (slides, notes, etc.)
@@ -410,44 +430,136 @@ The model development work focuses on recipe generation conditioned on inventory
 
 ### A. Synthetic Recipe Data & LoRA Fine-Tuning (Teammate 2)
 
-This section summarizes the external training workflow that produced the LoRA adapter used here.
+The complete training pipeline is available in `model_development/training_pipeline/`.
+
+#### Pipeline Overview
+
+```
+01_synthetic_generation/        # Groq API recipe generation (15k recipes)
+    ├── generate_synthetic_recipes_groq.py
+    ├── SCENARIOS.md               # 6 scenario descriptions
+    └── README.md
+
+02_chat_conversion/             # ChatML format conversion
+    ├── convert_to_chat_format.py
+    └── README.md
+
+03_validation/                  # Dietary constraint validation
+    ├── validate_dietary_constraints.py
+    ├── clean_training_data.py
+    └── README.md
+
+04_training/                    # Lambda Labs LoRA training
+    ├── lambda_finetune_llama3b.ipynb
+    ├── lora_config_v3.yaml
+    └── LAMBDA_LABS_SETUP_GUIDE.md
+
+data/                           # Training data (downloaded from GCS)
+    ├── synthetic/              # Raw synthetic recipes
+    ├── chat_format/            # ChatML converted
+    └── cleaned/                # Final cleaned dataset
+```
 
 #### 1. Synthetic recipe generation (Groq + Llama 3.1 8B)
-- Use Groq API with Llama 3.1 8B to generate ~12k synthetic recipes.
-- Cover multiple realistic scenarios:
-  - Full inventory usage
-  - Pure dietary constraints (vegan, vegetarian, gluten-free, dairy-free)
-  - Cuisine-specific prompts (Italian, Chinese, Mexican, Indian, Japanese, Korean, etc.)
-  - Combined constraints (e.g., vegan Italian, gluten-free Mexican)
-  - User-requested ingredients (all present / partial match scenarios)
-- Force JSON output with fields: recipe name, cuisine, culinary_preference, time, main_ingredients, steps, note, shopping_list.
+
+**Script**: `model_development/training_pipeline/01_synthetic_generation/generate_synthetic_recipes_groq.py`
+
+- Use Groq API with Llama 3.1 8B to generate ~15k synthetic recipes
+- Cover 6 realistic scenarios (see `SCENARIOS.md`):
+  1. Full inventory usage (3,000 recipes)
+  2. Inventory + dietary preference (2,400 recipes)
+  3. Inventory + cuisine (1,800 recipes)
+  4. All constraints combined (1,200 recipes)
+  5. Specific ingredients - all available (2,400 recipes)
+  6. Specific ingredients - some/all missing (1,200 recipes)
+- Force JSON output with fields: recipe name, cuisine, culinary_preference, time, main_ingredients, steps, note, shopping_list
+- Parallel processing with rate limiting (30 req/min)
+
+**Run**:
+```bash
+cd model_development/training_pipeline/01_synthetic_generation
+export GROQ_API_KEY="your_groq_api_key"
+python generate_synthetic_recipes_groq.py \
+  --config config/synthetic_generation.yaml \
+  --output data/synthetic/recipes_15k.jsonl
+```
 
 #### 2. ChatML conversion & cleaning
-- Convert each example into a ChatML-style conversation:
-  - `system`: instructions for the recipe generator
-  - `user`: inventory + preference request
-  - `assistant`: JSON recipe
-- Apply validation rules:
-  - Check vegan/vegetarian/gluten-free/dairy-free compliance
-  - Drop recipes that violate constraints (e.g., honey in vegan, soy sauce in gluten-free)
-- Result: ~11,850 clean training examples.
 
-#### 3. LoRA fine-tuning on Lambda Labs
-- **Base model:** meta-llama/Llama-3.2-3B-Instruct
+**Script**: `model_development/training_pipeline/02_chat_conversion/convert_to_chat_format.py`
+
+- Convert each example into a ChatML-style conversation:
+  - `<|im_start|>system` - Recipe generation instructions
+  - `<|im_start|>user` - Inventory + preference request
+  - `<|im_start|>assistant` - JSON recipe output
+- Natural language templates for user requests
+- Dietary constraint enforcement in system prompts
+
+**Run**:
+```bash
+cd model_development/training_pipeline/02_chat_conversion
+python convert_to_chat_format.py \
+  --input data/synthetic/recipes_15k.jsonl \
+  --output data/chat_format/recipes_chat.jsonl
+```
+
+#### 3. Validation & cleaning
+
+**Scripts**:
+- `model_development/training_pipeline/03_validation/validate_dietary_constraints.py`
+- `model_development/training_pipeline/03_validation/clean_training_data.py`
+
+- Validate dietary constraints (vegan, vegetarian, gluten-free, dairy-free)
+- Check for violations (e.g., honey in vegan, soy sauce in gluten-free)
+- Remove violating recipes (150 out of 12,000 = 1.25%)
+- Result: ~11,850 clean training examples
+
+**Run**:
+```bash
+cd model_development/training_pipeline/03_validation
+
+# Validate
+python validate_dietary_constraints.py \
+  --input data/chat_format/recipes_chat.jsonl \
+  --output validation_reports/violations.json
+
+# Clean
+python clean_training_data.py \
+  --input data/chat_format/recipes_chat.jsonl \
+  --violations validation_reports/violations.json \
+  --output data/cleaned/recipes_cleaned.jsonl \
+  --strategy remove
+```
+
+#### 4. LoRA fine-tuning on Lambda Labs
+
+**Notebook**: `model_development/training_pipeline/04_training/lambda_finetune_llama3b.ipynb`
+
+- **Base model:** meta-llama/Llama-3.2-3B-Instruct (6.4GB)
+- **Hardware:** Lambda Labs A100 40GB GPU
 - **Method:** LoRA via PEFT
-- **Typical config:**
+- **Config:**
   - Rank r = 16, alpha = 32
   - Target modules: q_proj, k_proj, v_proj, o_proj
-  - ~3 epochs, AdamW, cosine LR schedule
-- **Output:** LoRA adapter folder (not tracked by git), distributed to teammates as a zip.
+  - 3 epochs, learning rate 2e-4, batch size 8
+  - FP16 mixed precision
+- **Training time:** 45-60 minutes
+- **Cost:** $0.83 - $1.10
+- **Output:** LoRA adapter (52MB)
+
+See `model_development/training_pipeline/04_training/LAMBDA_LABS_SETUP_GUIDE.md` for complete setup instructions.
 
 ### B. Model Artifacts & Storage
-- **Local location (ignored by git):**
-  - `model_development/models/llama3b_lambda_lora/`
-- **Remote storage (Google Cloud Storage):**
-  - Bucket: `gs://recipegen-llm-models/`
-  - Region: `us-central1`
-  - Total size: ~52 MB
+
+**LoRA Adapter**:
+- **Local location (ignored by git):** `model_development/models/llama3b_lambda_lora/`
+- **Remote storage (GCS):** `gs://recipegen-llm-models/llama3b_lambda_lora/`
+- **Size:** ~52 MB
+
+**Training Data & Pipeline**:
+- **Local location (ignored by git):** `model_development/training_pipeline/data/`
+- **Remote storage (GCS):** `gs://recipegen-llm-models/data_pipeline/data_pipeline/`
+- **Size:** ~45 MB
 
 **Download Instructions:**
 
@@ -455,11 +567,15 @@ This section summarizes the external training workflow that produced the LoRA ad
 # Authenticate with GCP (if not already authenticated)
 gcloud auth login
 
-# Download model from GCS
+# Download LoRA model
 gcloud storage cp -r gs://recipegen-llm-models/llama3b_lambda_lora ./model_development/models/
 
-# Verify download
+# Download training data and pipeline (optional, for reproducibility)
+gcloud storage cp -r gs://recipegen-llm-models/data_pipeline/data_pipeline/ ./model_development/training_pipeline/
+
+# Verify downloads
 ls -lh model_development/models/llama3b_lambda_lora/
+ls -lh model_development/training_pipeline/data/
 ```
 
 **Important:**

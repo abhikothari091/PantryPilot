@@ -50,10 +50,14 @@ Thumbs.db
 
 # Model weights / adapters
 models/
+model_development/models/
 *.safetensors
 *.bin
 *.pt
 llama3b_lambda_lora.zip
+
+# Training data (use GCS for distribution)
+model_development/training_pipeline/data/
 
 # HF cache (if someone runs locally)
 .huggingface/

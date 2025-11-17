@@ -1,0 +1,32 @@
+# MLX LoRA V3 Configuration
+# Optimized for M4 Pro with conservative training to prevent overfitting
+
+# Model
+model: "mlx-community/Phi-3-mini-4k-instruct-4bit"
+
+# Training
+train: true
+data: "data/finetune"
+iters: 9000
+batch_size: 1
+learning_rate: 5e-05
+
+# LoRA Configuration
+lora_parameters:
+  rank: 8
+  alpha: 16
+  dropout: 0.05
+  scale: 16.0
+
+# Training schedule
+steps_per_report: 50
+steps_per_eval: 200
+save_every: 500
+
+# Model parameters
+max_seq_length: 2048
+adapter_path: "models/phi3-recipe-lora-v3"
+
+# Advanced
+grad_checkpoint: false
+seed: 42

@@ -42,11 +42,10 @@ jobs:
       # ---- Optional: download LoRA adapter from GCS (assumes teammate uploaded + made public) ----
       - name: Download LoRA adapter from GCS
         run: |
-          mkdir -p models
-          curl -L "https://storage.googleapis.com/pantrypilot-dvc-storage/data/models/llama3b_lambda_lora.zip" -o llama3b_lambda_lora.zip
-          unzip -o llama3b_lambda_lora.zip -d .
+          mkdir -p model_development/models
+          gcloud storage cp -r gs://recipegen-llm-models/llama3b_lambda_lora ./model_development/models/ --no-user-output-enabled || echo "Model download failed"
           echo "LoRA contents:"
-          ls -R models || true
+          ls -R model_development/models || true
 
       # ---- Data pipeline unit tests ----
       - name: Run data pipeline tests (pytest)

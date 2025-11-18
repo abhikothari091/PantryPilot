@@ -29,4 +29,7 @@ def extract_receipt_items(img_path):
     items = json.loads(text)
     return items
 
+if __name__ == "__main__":
+    test_path = "model_development/ocr/test_receipts/r0.jpg"
+    print(extract_receipt_items(test_path))
 

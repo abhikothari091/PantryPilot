@@ -18,19 +18,23 @@ All code for this phase lives under:
 
 ```
 model_development/
-  └── llm_eval/
-        ├── __init__.py
-        ├── config.py
-        ├── datasets.py
-        ├── metrics.py
-        ├── run_eval.py
-        ├── bias_eval.py
-        ├── analyze_results.py
-        ├── data/                  # logical home for eval-related data
-        └── reports/               # JSON + CSV outputs
-              ├── eval_*.json
-              ├── eval_summary_*.csv
-              └── bias_report.csv
+  ├── llm_eval/
+  │     ├── __init__.py
+  │     ├── config.py
+  │     ├── datasets.py
+  │     ├── metrics.py
+  │     ├── run_eval.py
+  │     ├── bias_eval.py
+  │     ├── analyze_results.py
+  │     ├── data/                  # logical home for eval-related data
+  │     └── reports/               # JSON + CSV outputs
+  │           ├── eval_*.json
+  │           ├── eval_summary_*.csv
+  │           └── bias_report.csv
+  └── ocr/
+        ├── scan_receipts.py
+        ├── ocr_evaluation.ipynb
+        └── test_receipts/
 ```
 
 The evaluation datasets themselves are stored under the data pipeline module:
@@ -601,7 +605,60 @@ The model development README (this file) serves as the source of truth for:
 
 ---
 
-## 9. Limitations & Future Work
+## 9. OCR
+
+The ocr folder contains tools for extracting grocery items from receipt images using Google's Gemini vision model.
+
+#### 9.1.1 Receipt Scanning Function
+scan_receipts.py provides the core extract_receipt_items(img_path) function that:
+
+- Uses Google Gemini 2.5 Flash model for vision-based OCR
+- Takes a local image path as input
+- Returns a JSON array of extracted grocery items
+
+#### 9.1.2 Prompt Design
+The function uses a strict prompt that:
+
+- Instructs the model to extract only food/grocery items from the receipt
+- Enforces JSON-only output with no explanatory text
+- Specifies the exact schema:
+
+```json
+[
+  {
+    "item": "item name",
+    "quantity": "quantity (oz, lbs, etc.)"
+  }
+]
+```
+
+Includes normalization rules:
+
+- Remove brand names from item names
+- Estimate quantities in appropriate units if not provided on receipt
+
+#### 9.1.3 Response Parsing
+The function handles Gemini's response format by:
+
+- Stripping markdown JSON code fences (```json ... ```) if present
+- Parsing the cleaned text as JSON
+- Returning the structured item list
+
+### 9.2 Evaluation Notebook
+ocr_evaluation.ipynb provides a batch testing workflow:
+
+- Iterates through all images (.png, .jpg, .jpeg) in the test_receipts/ folder
+- Displays each receipt image inline
+- Calls extract_receipt_items() for each image
+- Collects results in all_receipts_items dictionary keyed by filename
+- Prints extracted items in human-readable format
+
+### 9.3 Test Data
+The test_receipts/ folder contains evaluation images for validating OCR accuracy and robustness.
+
+--- 
+
+## 10. Limitations & Future Work
 
 - **Eval set size:** For runtime reasons, most local runs in development used subsets of the test set (e.g., 20 examples). Extending to the full ~1200 examples is possible on sufficiently powerful hardware.
 

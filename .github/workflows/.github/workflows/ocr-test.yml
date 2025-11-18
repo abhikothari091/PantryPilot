@@ -1,6 +1,7 @@
 name: OCR Test
 
 on:
+  workflow_dispatch:      # <-- manual trigger
   push:
     branches:
       - ocr
@@ -26,6 +27,11 @@ jobs:
           pip install pillow google-generativeai
 
       - name: Run OCR test
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python model_development/ocr/scan_receipts.py
+
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |

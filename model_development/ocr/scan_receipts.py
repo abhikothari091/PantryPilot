@@ -4,6 +4,7 @@ from io import BytesIO
 import json
 import os
 import time
+from datetime import datetime
 
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -27,6 +28,11 @@ def extract_receipt_items(img_path):
         text = text.replace('```json', '').replace('```', '').strip()
     
     items = json.loads(text)
+
+    today = datetime.today().strftime("%Y-%m-%d")
+    for item in items:
+        item["purchase_date"] = today
+
     return items
 
 if __name__ == "__main__":

@@ -64,3 +64,12 @@ model_development/training_pipeline/data/
 
 # Local caches
 .cache/
+
+# RecipeGen-LLM folder
+RecipeGen-LLM/
+
+# DPO Training artifacts
+model_development/training_pipeline/05_dpo_training/trained_models/
+model_development/training_pipeline/05_dpo_training/evaluation/reports/*.html
+model_development/training_pipeline/05_dpo_training/evaluation/reports/*.json
+model_development/training_pipeline/05_dpo_training/evaluation/generation_cache.json

@@ -1,0 +1,725 @@
+# DPO Persona Model Evaluation Test Cases
+# 6 personas × 20 test cases each = 120 total tests
+#
+# Test case structure per persona:
+# - Basic alignment (8 cases): Perfect match scenarios
+# - Constraint stress (6 cases): Forbidden ingredients in inventory
+# - Edge cases (4 cases): Minimal inventory, ambiguous requests
+# - Cross-persona (2 cases): Different cuisine requests
+
+test_cases:
+  # ============================================================
+  # Persona A: Korean Food Lover (Spicy)
+  # ============================================================
+  persona_a_korean_spicy:
+    # Basic alignment tests (8 cases)
+    - id: a01
+      inventory: [chicken, gochujang, rice, garlic, scallions, sesame oil]
+      request: "Make me a spicy Korean dish"
+      category: "basic_alignment"
+
+    - id: a02
+      inventory: [pork, kimchi, tofu, onion, soy sauce]
+      request: "Kimchi stew recipe"
+      category: "basic_alignment"
+
+    - id: a03
+      inventory: [beef, gochugaru, pear, soy sauce, garlic, sesame]
+      request: "I want to make bulgogi"
+      category: "basic_alignment"
+
+    - id: a04
+      inventory: [fish, gochujang, vegetables, rice, sesame oil]
+      request: "Korean spicy fish stew"
+      category: "basic_alignment"
+
+    - id: a05
+      inventory: [squid, gochugaru, vegetables, rice cakes]
+      request: "Spicy tteokbokki"
+      category: "basic_alignment"
+
+    - id: a06
+      inventory: [chicken, gochujang, potatoes, carrots, onion]
+      request: "Spicy braised chicken"
+      category: "basic_alignment"
+
+    - id: a07
+      inventory: [pork, kimchi, ramen noodles, egg]
+      request: "Kimchi ramen recipe"
+      category: "basic_alignment"
+
+    - id: a08
+      inventory: [beef, vegetables, gochujang, rice]
+      request: "Make me bibimbap"
+      category: "basic_alignment"
+
+    # Constraint stress tests (6 cases)
+    - id: a09
+      inventory: [tofu, vegetables, rice, miso]
+      request: "Vegetarian Korean dish"
+      category: "constraint_stress"
+      note: "No meat, but persona has no restrictions"
+
+    - id: a10
+      inventory: [chicken, mild seasoning, rice, vegetables]
+      request: "Korean food but not spicy"
+      category: "constraint_stress"
+      note: "Conflicts with spicy preference"
+
+    - id: a11
+      inventory: [pasta, tomato sauce, cheese, basil]
+      request: "Make me Korean food"
+      category: "constraint_stress"
+      note: "No Korean ingredients available"
+
+    - id: a12
+      inventory: [chicken, curry powder, rice, coconut milk]
+      request: "Asian cuisine"
+      category: "constraint_stress"
+      note: "Asian but not Korean"
+
+    - id: a13
+      inventory: [fish, lemon, olive oil, herbs]
+      request: "Simple Korean recipe"
+      category: "constraint_stress"
+      note: "Western ingredients"
+
+    - id: a14
+      inventory: [beef, soy sauce, sugar, ginger, rice]
+      request: "Sweet Korean beef"
+      category: "constraint_stress"
+      note: "Sweet vs spicy preference"
+
+    # Edge cases (4 cases)
+    - id: a15
+      inventory: [rice, egg, soy sauce]
+      request: "Simple Korean dish"
+      category: "edge_case"
+      note: "Minimal ingredients"
+
+    - id: a16
+      inventory: [chicken, gochujang, kimchi, tofu, rice, vegetables, eggs, pork, beef]
+      request: "Whatever you recommend"
+      category: "edge_case"
+      note: "Ambiguous request, many ingredients"
+
+    - id: a17
+      inventory: [instant ramen, egg, scallions]
+      request: "Quick meal"
+      category: "edge_case"
+      note: "Very quick cooking"
+
+    - id: a18
+      inventory: [kimchi, rice]
+      request: "What can you make with just kimchi?"
+      category: "edge_case"
+      note: "Only 2 ingredients"
+
+    # Cross-persona tests (2 cases)
+    - id: a19
+      inventory: [beans, avocado, lime, cilantro, tortilla]
+      request: "Mexican food please"
+      category: "cross_persona"
+      note: "Different cuisine request"
+
+    - id: a20
+      inventory: [pasta, tomato, basil, mozzarella]
+      request: "Make me Italian food"
+      category: "cross_persona"
+      note: "Different cuisine request"
+
+  # ============================================================
+  # Persona B: Indian Vegetarian (No Spicy)
+  # ============================================================
+  persona_b_indian_veg:
+    # Basic alignment (8 cases)
+    - id: b01
+      inventory: [paneer, tomato, cream, butter, mild spices]
+      request: "Paneer butter masala"
+      category: "basic_alignment"
+
+    - id: b02
+      inventory: [lentils, onion, tomato, turmeric, cumin]
+      request: "Dal tadka recipe"
+      category: "basic_alignment"
+
+    - id: b03
+      inventory: [cauliflower, potatoes, mild curry, ghee]
+      request: "Aloo gobi"
+      category: "basic_alignment"
+
+    - id: b04
+      inventory: [chickpeas, tomato, mild spices, rice]
+      request: "Chana masala, not spicy"
+      category: "basic_alignment"
+
+    - id: b05
+      inventory: [spinach, paneer, cream, mild spices]
+      request: "Palak paneer"
+      category: "basic_alignment"
+
+    - id: b06
+      inventory: [rice, yogurt, vegetables, mild curry]
+      request: "Vegetable biryani, mild"
+      category: "basic_alignment"
+
+    - id: b07
+      inventory: [potatoes, peas, mild spices, roti]
+      request: "Aloo matar"
+      category: "basic_alignment"
+
+    - id: b08
+      inventory: [mixed vegetables, mild curry, coconut milk]
+      request: "Mild vegetable curry"
+      category: "basic_alignment"
+
+    # Constraint stress (6 cases)
+    - id: b09
+      inventory: [chicken, tomato, curry, rice]
+      request: "Indian curry"
+      category: "constraint_stress"
+      note: "Contains meat (forbidden)"
+
+    - id: b10
+      inventory: [shrimp, coconut milk, curry, vegetables]
+      request: "Seafood curry"
+      category: "constraint_stress"
+      note: "Contains seafood (forbidden)"
+
+    - id: b11
+      inventory: [paneer, chili, hot spices, tomato]
+      request: "Spicy paneer tikka"
+      category: "constraint_stress"
+      note: "Spicy request (forbidden)"
+
+    - id: b12
+      inventory: [beef, curry powder, rice]
+      request: "Make me Indian food"
+      category: "constraint_stress"
+      note: "Meat in inventory (forbidden)"
+
+    - id: b13
+      inventory: [eggs, milk, flour, sugar]
+      request: "Indian vegetarian dessert"
+      category: "constraint_stress"
+      note: "Eggs (not strictly vegetarian)"
+
+    - id: b14
+      inventory: [fish, curry leaves, coconut, tamarind]
+      request: "South Indian recipe"
+      category: "constraint_stress"
+      note: "Fish (forbidden)"
+
+    # Edge cases (4 cases)
+    - id: b15
+      inventory: [rice, ghee, cumin]
+      request: "Simple Indian dish"
+      category: "edge_case"
+      note: "Minimal ingredients"
+
+    - id: b16
+      inventory: [many vegetables, many spices, paneer, lentils, rice, yogurt]
+      request: "Surprise me with Indian food"
+      category: "edge_case"
+      note: "Ambiguous request"
+
+    - id: b17
+      inventory: [instant noodles, mild curry, vegetables]
+      request: "Quick Indian fusion"
+      category: "edge_case"
+      note: "Non-traditional"
+
+    - id: b18
+      inventory: [yogurt, cucumber]
+      request: "Raita recipe"
+      category: "edge_case"
+      note: "Very simple side dish"
+
+    # Cross-persona (2 cases)
+    - id: b19
+      inventory: [chicken, gochujang, rice]
+      request: "Korean spicy food"
+      category: "cross_persona"
+      note: "Conflicts with both meat and spicy restrictions"
+
+    - id: b20
+      inventory: [spaghetti, tomato, cheese]
+      request: "Italian pasta"
+      category: "cross_persona"
+      note: "Different cuisine"
+
+  # ============================================================
+  # Persona C: Italian Food Lover (Gluten-Free)
+  # ============================================================
+  persona_c_italian_gf:
+    # Basic alignment (8 cases)
+    - id: c01
+      inventory: [arborio rice, mushrooms, parmesan, white wine, butter]
+      request: "Mushroom risotto"
+      category: "basic_alignment"
+
+    - id: c02
+      inventory: [polenta, tomato sauce, mozzarella, basil]
+      request: "Polenta with tomato"
+      category: "basic_alignment"
+
+    - id: c03
+      inventory: [shrimp, garlic, olive oil, lemon, herbs]
+      request: "Garlic shrimp Italian style"
+      category: "basic_alignment"
+
+    - id: c04
+      inventory: [salmon, tomatoes, olives, capers, herbs]
+      request: "Mediterranean fish"
+      category: "basic_alignment"
+
+    - id: c05
+      inventory: [chicken, tomatoes, mozzarella, basil, olive oil]
+      request: "Caprese chicken"
+      category: "basic_alignment"
+
+    - id: c06
+      inventory: [eggplant, tomato sauce, mozzarella, basil]
+      request: "Eggplant parmigiana, no breading"
+      category: "basic_alignment"
+
+    - id: c07
+      inventory: [zucchini, tomato, garlic, olive oil, herbs]
+      request: "Italian zucchini"
+      category: "basic_alignment"
+
+    - id: c08
+      inventory: [seafood mix, tomato, white wine, herbs]
+      request: "Seafood stew Italian style"
+      category: "basic_alignment"
+
+    # Constraint stress (6 cases)
+    - id: c09
+      inventory: [spaghetti, tomato sauce, basil, olive oil]
+      request: "Classic Italian pasta"
+      category: "constraint_stress"
+      note: "Contains pasta (forbidden)"
+
+    - id: c10
+      inventory: [flour, eggs, tomato, cheese]
+      request: "Make me Italian food"
+      category: "constraint_stress"
+      note: "Contains flour (forbidden)"
+
+    - id: c11
+      inventory: [bread, olive oil, tomato, basil]
+      request: "Bruschetta"
+      category: "constraint_stress"
+      note: "Contains bread (forbidden)"
+
+    - id: c12
+      inventory: [pizza dough, mozzarella, tomato, basil]
+      request: "Margherita pizza"
+      category: "constraint_stress"
+      note: "Contains wheat dough (forbidden)"
+
+    - id: c13
+      inventory: [penne pasta, pesto, parmesan]
+      request: "Pesto pasta"
+      category: "constraint_stress"
+      note: "Contains pasta (forbidden)"
+
+    - id: c14
+      inventory: [couscous, vegetables, olive oil]
+      request: "Mediterranean couscous salad"
+      category: "constraint_stress"
+      note: "Contains couscous (forbidden)"
+
+    # Edge cases (4 cases)
+    - id: c15
+      inventory: [tomato, mozzarella, basil]
+      request: "Simple Italian"
+      category: "edge_case"
+      note: "Minimal ingredients"
+
+    - id: c16
+      inventory: [lots of seafood, vegetables, rice, polenta, herbs, cheese]
+      request: "Whatever Italian you recommend"
+      category: "edge_case"
+      note: "Ambiguous, many ingredients"
+
+    - id: c17
+      inventory: [tomato, olive oil]
+      request: "Quick Italian side"
+      category: "edge_case"
+      note: "Very few ingredients"
+
+    - id: c18
+      inventory: [mozzarella, basil]
+      request: "Can you make anything Italian?"
+      category: "edge_case"
+      note: "Very limited"
+
+    # Cross-persona (2 cases)
+    - id: c19
+      inventory: [kimchi, gochujang, rice]
+      request: "Korean food"
+      category: "cross_persona"
+
+    - id: c20
+      inventory: [tortilla, beans, avocado]
+      request: "Mexican tacos"
+      category: "cross_persona"
+
+  # ============================================================
+  # Persona D: Japanese Cuisine (Low Sodium)
+  # ============================================================
+  persona_d_japanese_lowsodium:
+    # Basic alignment (8 cases)
+    - id: d01
+      inventory: [fish, vegetables, rice, light seasoning]
+      request: "Low sodium Japanese fish"
+      category: "basic_alignment"
+
+    - id: d02
+      inventory: [tofu, vegetables, seaweed, rice]
+      request: "Healthy tofu recipe"
+      category: "basic_alignment"
+
+    - id: d03
+      inventory: [salmon, rice, vegetables, lemon]
+      request: "Light salmon dish"
+      category: "basic_alignment"
+
+    - id: d04
+      inventory: [chicken, vegetables, rice, ginger]
+      request: "Japanese chicken without soy sauce"
+      category: "basic_alignment"
+
+    - id: d05
+      inventory: [vegetables, rice, sesame, light seasoning]
+      request: "Vegetable rice bowl, low sodium"
+      category: "basic_alignment"
+
+    - id: d06
+      inventory: [fish, daikon, rice, light broth]
+      request: "Light fish soup"
+      category: "basic_alignment"
+
+    - id: d07
+      inventory: [tofu, mushrooms, vegetables, rice]
+      request: "Healthy Japanese stir-fry"
+      category: "basic_alignment"
+
+    - id: d08
+      inventory: [shrimp, vegetables, rice, lemon]
+      request: "Light shrimp dish"
+      category: "basic_alignment"
+
+    # Constraint stress (6 cases)
+    - id: d09
+      inventory: [fish, soy sauce, rice, vegetables]
+      request: "Japanese fish"
+      category: "constraint_stress"
+      note: "Contains soy sauce (forbidden)"
+
+    - id: d10
+      inventory: [tofu, miso paste, seaweed, rice]
+      request: "Miso soup"
+      category: "constraint_stress"
+      note: "Contains miso (forbidden)"
+
+    - id: d11
+      inventory: [pork, salt, rice, vegetables]
+      request: "Tonkatsu"
+      category: "constraint_stress"
+      note: "Contains salt (forbidden)"
+
+    - id: d12
+      inventory: [fish, pickled vegetables, rice]
+      request: "Traditional Japanese meal"
+      category: "constraint_stress"
+      note: "Contains pickled (forbidden)"
+
+    - id: d13
+      inventory: [salmon, soy sauce, mirin, rice]
+      request: "Teriyaki salmon"
+      category: "constraint_stress"
+      note: "Contains soy sauce (forbidden)"
+
+    - id: d14
+      inventory: [chicken, soy sauce, sake, sugar]
+      request: "Chicken teriyaki"
+      category: "constraint_stress"
+      note: "Contains soy sauce (forbidden)"
+
+    # Edge cases (4 cases)
+    - id: d15
+      inventory: [rice, seaweed, fish]
+      request: "Simple Japanese"
+      category: "edge_case"
+      note: "Minimal ingredients"
+
+    - id: d16
+      inventory: [many fish types, vegetables, tofu, rice, various seasonings]
+      request: "Healthy Japanese meal"
+      category: "edge_case"
+      note: "Many options"
+
+    - id: d17
+      inventory: [tofu, rice]
+      request: "Quickest Japanese dish"
+      category: "edge_case"
+      note: "Very limited"
+
+    - id: d18
+      inventory: [fish, lemon]
+      request: "Can you make Japanese food?"
+      category: "edge_case"
+      note: "Very minimal"
+
+    # Cross-persona (2 cases)
+    - id: d19
+      inventory: [pasta, tomato, basil, salt]
+      request: "Italian food"
+      category: "cross_persona"
+
+    - id: d20
+      inventory: [curry, chicken, rice, soy sauce]
+      request: "Spicy curry"
+      category: "cross_persona"
+
+  # ============================================================
+  # Persona E: Mexican Vegan
+  # ============================================================
+  persona_e_mexican_vegan:
+    # Basic alignment (8 cases)
+    - id: e01
+      inventory: [black beans, avocado, lime, cilantro, tortilla]
+      request: "Vegan tacos"
+      category: "basic_alignment"
+
+    - id: e02
+      inventory: [pinto beans, rice, salsa, tortilla]
+      request: "Burrito bowl, vegan"
+      category: "basic_alignment"
+
+    - id: e03
+      inventory: [corn, lime, avocado, cilantro, tortilla chips]
+      request: "Vegan nachos"
+      category: "basic_alignment"
+
+    - id: e04
+      inventory: [beans, vegetables, salsa, guacamole]
+      request: "Vegan Mexican platter"
+      category: "basic_alignment"
+
+    - id: e05
+      inventory: [sweet potato, black beans, salsa, avocado]
+      request: "Sweet potato tacos"
+      category: "basic_alignment"
+
+    - id: e06
+      inventory: [beans, rice, vegetables, tortilla]
+      request: "Vegan burrito"
+      category: "basic_alignment"
+
+    - id: e07
+      inventory: [tomato, onion, cilantro, lime, jalapeño]
+      request: "Salsa and pico de gallo"
+      category: "basic_alignment"
+
+    - id: e08
+      inventory: [corn tortillas, beans, vegetables, salsa]
+      request: "Enchiladas, vegan"
+      category: "basic_alignment"
+
+    # Constraint stress (6 cases)
+    - id: e09
+      inventory: [chicken, beans, tortilla, salsa]
+      request: "Mexican tacos"
+      category: "constraint_stress"
+      note: "Contains chicken (forbidden)"
+
+    - id: e10
+      inventory: [beef, cheese, tortilla, salsa]
+      request: "Quesadilla"
+      category: "constraint_stress"
+      note: "Contains beef and cheese (forbidden)"
+
+    - id: e11
+      inventory: [fish, lime, cilantro, tortilla]
+      request: "Fish tacos"
+      category: "constraint_stress"
+      note: "Contains fish (forbidden)"
+
+    - id: e12
+      inventory: [eggs, cheese, tortilla, salsa]
+      request: "Breakfast burrito"
+      category: "constraint_stress"
+      note: "Contains eggs and cheese (forbidden)"
+
+    - id: e13
+      inventory: [chicken, sour cream, cheese, tortilla]
+      request: "Chicken enchiladas"
+      category: "constraint_stress"
+      note: "Contains multiple forbidden items"
+
+    - id: e14
+      inventory: [pork, cheese, beans, tortilla]
+      request: "Carnitas tacos"
+      category: "constraint_stress"
+      note: "Contains pork and cheese (forbidden)"
+
+    # Edge cases (4 cases)
+    - id: e15
+      inventory: [beans, tortilla, lime]
+      request: "Simple Mexican"
+      category: "edge_case"
+      note: "Minimal ingredients"
+
+    - id: e16
+      inventory: [many beans, vegetables, tortillas, salsa, guacamole, rice]
+      request: "Full Mexican feast, vegan"
+      category: "edge_case"
+      note: "Many ingredients"
+
+    - id: e17
+      inventory: [avocado, lime]
+      request: "Quick Mexican"
+      category: "edge_case"
+      note: "Very limited"
+
+    - id: e18
+      inventory: [corn, salsa]
+      request: "Anything Mexican"
+      category: "edge_case"
+      note: "Minimal"
+
+    # Cross-persona (2 cases)
+    - id: e19
+      inventory: [pasta, tomato, basil, cheese]
+      request: "Italian food"
+      category: "cross_persona"
+      note: "Contains cheese"
+
+    - id: e20
+      inventory: [chicken, rice, curry]
+      request: "Indian curry"
+      category: "cross_persona"
+      note: "Contains chicken"
+
+  # ============================================================
+  # Persona F: Chinese Low-Carb (Keto)
+  # ============================================================
+  persona_f_chinese_keto:
+    # Basic alignment (8 cases)
+    - id: f01
+      inventory: [chicken, bok choy, garlic, ginger, soy sauce alternative]
+      request: "Low-carb Chinese chicken"
+      category: "basic_alignment"
+
+    - id: f02
+      inventory: [beef, broccoli, garlic, low-carb sauce]
+      request: "Keto beef and broccoli"
+      category: "basic_alignment"
+
+    - id: f03
+      inventory: [pork, cauliflower, ginger, garlic]
+      request: "Keto Chinese stir-fry"
+      category: "basic_alignment"
+
+    - id: f04
+      inventory: [shrimp, vegetables, garlic, ginger]
+      request: "Low-carb shrimp stir-fry"
+      category: "basic_alignment"
+
+    - id: f05
+      inventory: [chicken, cauliflower rice, vegetables, soy sauce alternative]
+      request: "Keto Chinese fried rice"
+      category: "basic_alignment"
+
+    - id: f06
+      inventory: [fish, bok choy, ginger, garlic]
+      request: "Low-carb Chinese fish"
+      category: "basic_alignment"
+
+    - id: f07
+      inventory: [beef, cabbage, garlic, ginger]
+      request: "Keto Chinese beef"
+      category: "basic_alignment"
+
+    - id: f08
+      inventory: [chicken, vegetables, garlic, ginger, sesame oil]
+      request: "Low-carb chicken stir-fry"
+      category: "basic_alignment"
+
+    # Constraint stress (6 cases)
+    - id: f09
+      inventory: [chicken, rice, soy sauce, vegetables]
+      request: "Chinese fried rice"
+      category: "constraint_stress"
+      note: "Contains rice (forbidden)"
+
+    - id: f10
+      inventory: [beef, noodles, vegetables, sauce]
+      request: "Lo mein"
+      category: "constraint_stress"
+      note: "Contains noodles (forbidden)"
+
+    - id: f11
+      inventory: [chicken, sugar, cornstarch, soy sauce]
+      request: "Sweet and sour chicken"
+      category: "constraint_stress"
+      note: "Contains sugar and cornstarch (forbidden)"
+
+    - id: f12
+      inventory: [pork, rice, sweet sauce, pineapple]
+      request: "Chinese pork"
+      category: "constraint_stress"
+      note: "Contains rice and sweet sauce (forbidden)"
+
+    - id: f13
+      inventory: [shrimp, noodles, vegetables]
+      request: "Shrimp chow mein"
+      category: "constraint_stress"
+      note: "Contains noodles (forbidden)"
+
+    - id: f14
+      inventory: [chicken, flour, sweet sauce]
+      request: "General Tso's chicken"
+      category: "constraint_stress"
+      note: "Contains flour and sweet sauce (forbidden)"
+
+    # Edge cases (4 cases)
+    - id: f15
+      inventory: [chicken, bok choy, garlic]
+      request: "Simple Chinese keto"
+      category: "edge_case"
+      note: "Minimal ingredients"
+
+    - id: f16
+      inventory: [many proteins, vegetables, low-carb sauces, cauliflower rice]
+      request: "Keto Chinese feast"
+      category: "edge_case"
+      note: "Many ingredients"
+
+    - id: f17
+      inventory: [beef, cabbage]
+      request: "Quick Chinese"
+      category: "edge_case"
+      note: "Very limited"
+
+    - id: f18
+      inventory: [bok choy, garlic]
+      request: "Any Chinese dish?"
+      category: "edge_case"
+      note: "Minimal"
+
+    # Cross-persona (2 cases)
+    - id: f19
+      inventory: [pasta, tomato, basil]
+      request: "Italian pasta"
+      category: "cross_persona"
+      note: "Contains pasta"
+
+    - id: f20
+      inventory: [beans, rice, tortilla]
+      request: "Mexican burrito"
+      category: "cross_persona"
+      note: "Contains rice and tortilla"

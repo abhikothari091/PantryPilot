@@ -1,0 +1,17 @@
+# DPO Evaluation Requirements
+
+# Core ML libraries
+torch>=2.0.0
+transformers>=4.35.0
+peft>=0.7.0
+
+# Google Cloud
+google-cloud-aiplatform>=1.38.0
+google-cloud-storage>=2.10.0
+
+# Data processing
+pyyaml>=6.0
+tqdm>=4.65.0
+
+# Utilities
+python-dotenv>=1.0.0

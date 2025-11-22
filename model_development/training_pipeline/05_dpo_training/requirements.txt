@@ -1,0 +1,22 @@
+# DPO Training Pipeline Requirements
+
+# Core ML libraries
+torch>=2.0.0
+transformers>=4.57.1
+peft>=0.18.0
+trl>=0.25.1  # DPO trainer
+accelerate>=1.12.0
+bitsandbytes>=0.45.0  # 4-bit quantization
+
+# Data processing
+datasets>=3.2.0
+pyyaml>=6.0
+tqdm>=4.65.0
+
+# API clients
+groq  # For Llama 70B preference labeling
+google-cloud-aiplatform>=1.38.0  # Vertex AI evaluation
+google-cloud-storage>=2.10.0
+
+# Utilities
+python-dotenv>=1.0.0

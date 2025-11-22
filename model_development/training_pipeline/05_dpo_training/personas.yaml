@@ -1,0 +1,60 @@
+personas:
+  persona_a_korean_spicy:
+    name: "Korean Food Lover (Spicy)"
+    preferences:
+      cuisine: ["korean", "asian"]
+      flavor_profile: ["spicy", "umami", "savory"]
+      cooking_style: "quick"
+    dietary_restrictions: []
+    forbidden_keywords: []
+    preference_keywords: ["gochujang", "kimchi", "spicy", "korean", "gochugaru", "sesame oil"]
+
+  persona_b_indian_veg:
+    name: "Indian Vegetarian (No Spicy)"
+    preferences:
+      cuisine: ["indian"]
+      flavor_profile: ["mild", "aromatic", "creamy"]
+      cooking_style: "traditional"
+    dietary_restrictions: ["vegetarian"]
+    forbidden_keywords: ["meat", "chicken", "beef", "pork", "fish", "seafood", "shrimp", "salmon", "tuna", "bacon", "spicy", "chili", "hot"]
+    preference_keywords: ["paneer", "dal", "curry", "mild", "ghee", "turmeric", "cumin"]
+
+  persona_c_italian_gf:
+    name: "Italian Food Lover (Gluten-Free)"
+    preferences:
+      cuisine: ["italian", "mediterranean"]
+      flavor_profile: ["savory", "herbal", "olive oil"]
+      cooking_style: "traditional"
+    dietary_restrictions: ["gluten-free"]
+    forbidden_keywords: ["pasta", "bread", "flour", "wheat", "barley", "rye", "noodles", "spaghetti", "penne", "couscous"]
+    preference_keywords: ["risotto", "polenta", "seafood", "italian", "basil", "oregano", "mozzarella"]
+
+  persona_d_japanese_lowsodium:
+    name: "Japanese Cuisine (Low Sodium)"
+    preferences:
+      cuisine: ["japanese", "asian"]
+      flavor_profile: ["umami", "light", "fresh"]
+      cooking_style: "healthy"
+    dietary_restrictions: []
+    forbidden_keywords: ["soy sauce", "miso", "salt", "pickled", "cured", "salted"]
+    preference_keywords: ["light", "fresh", "healthy", "low sodium", "fish", "tofu", "seaweed"]
+
+  persona_e_mexican_vegan:
+    name: "Mexican Vegan"
+    preferences:
+      cuisine: ["mexican", "latin"]
+      flavor_profile: ["spicy", "bold", "savory"]
+      cooking_style: "comfort"
+    dietary_restrictions: ["vegan"]
+    forbidden_keywords: ["meat", "chicken", "beef", "pork", "cheese", "dairy", "milk", "eggs", "butter", "yogurt", "fish", "seafood"]
+    preference_keywords: ["beans", "avocado", "salsa", "vegan", "lime", "cilantro", "tortilla"]
+
+  persona_f_chinese_keto:
+    name: "Chinese Low-Carb (Keto)"
+    preferences:
+      cuisine: ["chinese", "asian"]
+      flavor_profile: ["savory", "garlicky", "ginger"]
+      cooking_style: "quick"
+    dietary_restrictions: []
+    forbidden_keywords: ["rice", "noodles", "sugar", "cornstarch", "bread", "flour", "potato", "corn", "sweet"]
+    preference_keywords: ["low-carb", "keto", "cauliflower rice", "protein", "vegetables", "bok choy"]

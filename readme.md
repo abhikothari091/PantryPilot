@@ -37,7 +37,7 @@ This README describes both the data pipeline and the model development work, plu
 
 ## 🧱 System Architecture
 
-```md
+```
 [Synthetic Data Generation for Inventory]
  data_pipeline/data/scripts/synthetic_generate.py
  → Generate diverse pantry items (Western + Non-Western cuisines)
@@ -63,60 +63,15 @@ Neon Database (PostgreSQL)
        ▼
 [Model Development]
  model_development/
-  ├── backend/                                 # Local serving backend for demo
-  │   ├── main.py                              # FastAPI entrypoint
-  │   ├── model_service.py                     # Wrapper around generator / LLM
-  │   ├── database.py                          # (If used) preference / history store
-  │   └── requirements.txt
-  │
-  ├── flowchart/
-  │   └── model_development_flowchart.png      # High-level model dev diagram
-  │
-  ├── generator/                               # Shared tokenizer / adapter configs
-  │   ├── adapter_config.json                  # LoRA adapter config (structure only)
-  │   ├── tokenizer.json                       # Tokenizer vocab + merges
-  │   ├── tokenizer_config.json
-  │   └── special_tokens_map.json
-  │
-  ├── llm_eval/                                # Base vs LoRA evaluation & bias
-  │   ├── config.py                            # Paths, model names, MAX_NEW_TOKENS
-  │   ├── datasets.py                          # RecipeTestExample + loaders
-  │   ├── metrics.py                           # JSON parsing + metric computation
-  │   ├── run_eval.py                          # Main eval: base vs LoRA
-  │   ├── bias_eval.py                         # Slice-based bias evaluation
-  │   ├── analyze_results.py                   # Helper for summarizing CSVs
-  │   ├── reports/                             # eval_*.json, eval_summary_*.csv, bias_report.csv
-  │   └── __init__.py
-  │
-  ├── ocr/                                     # Receipt OCR experiments
-  │   ├── scan_receipts.py                     # Calls OCR / VLM on sample receipts
-  │   ├── ocr_evaluation.ipynb                 # Manual evaluation notebook
-  │   └── test_receipts/                       # Sample receipt images
-  │
-  ├── reward_model/                            # Preference reward model (ranking recipes)
-  │   ├── reward_model.py                      # Model architecture + scoring
-  │   ├── reward_model.pth                     # Trained weights (local only)
-  │   ├── test_reward_model_ranking.py         # Sanity checks on ranking behavior
-  │   ├── debug_reward_model.py                # Debugging utilities
-  │   └── new_reward_data/                     # Labeled pairs for ranking
-  │
-  ├── training_pipeline/                       # Upstream training repo snapshot
-  │   ├── 01_synthetic_generation/             # Groq-based recipe synthesis
-  │   ├── 02_chat_conversion/                  # Convert to ChatML format
-  │   ├── 03_validation/                       # Constraint / JSON validation
-  │   └── 04_training/                         # LoRA training scripts & configs
-  │
-  ├── scripts/
-  │   ├── model_eval.py                        # High-level wrapper around llm_eval
-  │   └── recipe_endpoints.py                  # Helper to expose generator endpoints
-  │
-  ├── user_data/
-  │   ├── Ashwin_preferences.jsonl             # Example personalized prefs
-  │   └── my_preferences.jsonl                 # Example prefs for demo
-  │
-  └── README.md                                # Model development documentation
+  ├── (Teammate 2) Synthetic recipe generation + LoRA fine-tuning
+  ├── (External) FastAPI + React app for recipe serving
+  └── llm_eval/ (this project)
+        ├── run_eval.py        # Base vs LoRA evaluation
+        ├── metrics.py         # Parsing and metric computation
+        ├── datasets.py        # Test data loader
+        ├── bias_eval.py       # Bias slice evaluation
+        └── reports/           # CSV/JSON outputs
 ```
-
 
 In a fully integrated version of PantryPilot, the data pipeline outputs (clean inventory and history) would feed into the model inference layer to drive personalized recipe generation and inventory-aware suggestions.
 
@@ -979,4 +934,5 @@ From a full MLOps perspective, this project demonstrates:
 - CI hooks to prevent obvious regressions in both pipeline and model evaluation code
 
 Overall, PantryPilot moves from synthetic inventory data → clean, validated tables → LLM-based recipe generation with measured behavior across multiple user segments. That matches the course goal: not just training a model, but integrating it into a reproducible, observable, and evaluable system.
+
 

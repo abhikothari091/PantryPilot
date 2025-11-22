@@ -18,23 +18,58 @@ All code for this phase lives under:
 
 ```
 model_development/
-  ├── llm_eval/
-  │     ├── __init__.py
-  │     ├── config.py
-  │     ├── datasets.py
-  │     ├── metrics.py
-  │     ├── run_eval.py
-  │     ├── bias_eval.py
-  │     ├── analyze_results.py
-  │     ├── data/                  # logical home for eval-related data
-  │     └── reports/               # JSON + CSV outputs
-  │           ├── eval_*.json
-  │           ├── eval_summary_*.csv
-  │           └── bias_report.csv
-  └── ocr/
-        ├── scan_receipts.py
-        ├── ocr_evaluation.ipynb
-        └── test_receipts/
+  ├── backend/                                 # Local serving backend for demo
+  │   ├── main.py                              # FastAPI entrypoint
+  │   ├── model_service.py                     # Wrapper around generator / LLM
+  │   ├── database.py                          # (If used) preference / history store
+  │   └── requirements.txt
+  │
+  ├── flowchart/
+  │   └── model_development_flowchart.png      # High-level model dev diagram
+  │
+  ├── generator/                               # Shared tokenizer / adapter configs
+  │   ├── adapter_config.json                  # LoRA adapter config (structure only)
+  │   ├── tokenizer.json                       # Tokenizer vocab + merges
+  │   ├── tokenizer_config.json
+  │   └── special_tokens_map.json
+  │
+  ├── llm_eval/                                # Base vs LoRA evaluation & bias
+  │   ├── config.py                            # Paths, model names, MAX_NEW_TOKENS
+  │   ├── datasets.py                          # RecipeTestExample + loaders
+  │   ├── metrics.py                           # JSON parsing + metric computation
+  │   ├── run_eval.py                          # Main eval: base vs LoRA
+  │   ├── bias_eval.py                         # Slice-based bias evaluation
+  │   ├── analyze_results.py                   # Helper for summarizing CSVs
+  │   ├── reports/                             # eval_*.json, eval_summary_*.csv, bias_report.csv
+  │   └── __init__.py
+  │
+  ├── ocr/                                     # Receipt OCR experiments
+  │   ├── scan_receipts.py                     # Calls OCR / VLM on sample receipts
+  │   ├── ocr_evaluation.ipynb                 # Manual evaluation notebook
+  │   └── test_receipts/                       # Sample receipt images
+  │
+  ├── reward_model/                            # Preference reward model (ranking recipes)
+  │   ├── reward_model.py                      # Model architecture + scoring
+  │   ├── reward_model.pth                     # Trained weights (local only)
+  │   ├── test_reward_model_ranking.py         # Sanity checks on ranking behavior
+  │   ├── debug_reward_model.py                # Debugging utilities
+  │   └── new_reward_data/                     # Labeled pairs for ranking
+  │
+  ├── training_pipeline/                       # Upstream training repo snapshot
+  │   ├── 01_synthetic_generation/             # Groq-based recipe synthesis
+  │   ├── 02_chat_conversion/                  # Convert to ChatML format
+  │   ├── 03_validation/                       # Constraint / JSON validation
+  │   └── 04_training/                         # LoRA training scripts & configs
+  │
+  ├── scripts/
+  │   ├── model_eval.py                        # High-level wrapper around llm_eval
+  │   └── recipe_endpoints.py                  # Helper to expose generator endpoints
+  │
+  ├── user_data/
+  │   ├── Ashwin_preferences.jsonl             # Example personalized prefs
+  │   └── my_preferences.jsonl                 # Example prefs for demo
+  │
+  └── README.md                                # Model development documentation
 ```
 
 The evaluation datasets themselves are stored under the data pipeline module:

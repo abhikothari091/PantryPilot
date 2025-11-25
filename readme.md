@@ -344,10 +344,12 @@ PantryPilot/
 │   │       └── bias_report.csv
 │   └── models/                         # NOT tracked by git (see .gitignore)
 │       └── llama3b_lambda_lora/        # LoRA adapter (local, from GCS)
-│   └── ocr/                            # New folder for OCR pipeline
-│       ├── scan_receipts.py
-│       ├── ocr_evaluation.ipynb
-│       └── test_receipts/              # Folder of receipt images for manual evaluation
+│   └── ocr-api/                        # Main folder for OCR service
+│       ├── Dockerfile                   # Dockerfile for building the container
+│       └── app/                         # Application code
+│           ├── main.py                  # FastAPI entrypoint
+│           ├── receipt_extractor.py     # Receipt extraction functions
+│           └── tests/                   # Folder of receipt images for testing
 │
 ├── DataCard/                           # Data & model documentation
 ├── docs/                               # Global docs (slides, notes, etc.)

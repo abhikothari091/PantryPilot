@@ -1,0 +1,298 @@
+import React, { useState } from 'react';
+import Layout from '../components/Layout';
+import api from '../api/axios';
+import { Send, ThumbsUp, ThumbsDown, CheckCircle, Loader2, Sparkles, ChefHat, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const RecipeGenerator = () => {
+    const [query, setQuery] = useState('');
+    const [servings, setServings] = useState(2);
+    const [loading, setLoading] = useState(false);
+    const [recipe, setRecipe] = useState(null);
+    const [historyId, setHistoryId] = useState(null);
+    const [feedback, setFeedback] = useState(null); // 1 or 2
+    const [cooked, setCooked] = useState(false);
+    const [error, setError] = useState('');
+
+    const parseRecipeResponse = (content) => {
+        // Handle various response formats
+        if (typeof content === 'object' && content !== null) {
+            return content;
+        }
+
+        if (typeof content === 'string') {
+            try {
+                // Try to find and parse JSON in the string
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    return JSON.parse(jsonMatch[0]);
+                }
+                // If no JSON found, return as raw text
+                return { raw_text: content };
+            } catch (e) {
+                // If parsing fails, return as raw text
+                return { raw_text: content };
+            }
+        }
+
+        return { raw_text: 'Unable to parse recipe' };
+    };
+
+    const handleGenerate = async () => {
+        if (!query.trim()) return;
+
+        setLoading(true);
+        setError('');
+        setRecipe(null);
+        setFeedback(null);
+        setCooked(false);
+
+        try {
+            const res = await api.post('/recipes/generate', {
+                user_request: `${query} (for ${servings} servings)`,
+                servings: servings
+            });
+            if (res.data.status === 'success') {
+                const recipeData = parseRecipeResponse(res.data.data.recipe);
+                setRecipe(recipeData);
+                setHistoryId(res.data.history_id);
+            } else {
+                setError('Failed to generate recipe. Please try again.');
+            }
+        } catch (err) {
+            console.error('Recipe generation error:', err);
+            setError('An error occurred. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleFeedback = async (score) => {
+        if (!historyId) return;
+        try {
+            await api.post(`/recipes/${historyId}/feedback`, { score });
+            setFeedback(score);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleCooked = async () => {
+        if (!historyId) return;
+        try {
+            await api.post(`/recipes/${historyId}/cooked`);
+            setCooked(true);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    return (
+        <Layout>
+            <div className="max-w-4xl mx-auto">
+                {/* Header */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-10"
+                >
+                    <h1 className="text-5xl font-bold text-gradient mb-4">
+                        What are you craving?
+                    </h1>
+                    <p className="text-slate-500 text-lg">
+                        Let AI craft the perfect recipe from your pantry.
+                    </p>
+                </motion.div>
+
+                {/* Search Bar */}
+                                                👨‍🍳
+                                            </motion.div>
+
+                                            {/* Pulsing Ring */}
+                                            <motion.div
+                                                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }}
+                                                transition={{ duration: 2, repeat: Infinity }}
+                                                className="absolute inset-0 -m-4 rounded-full border-4 border-primary-400"
+                                            />
+                                        </div>
+
+                                        <motion.p
+                                            animate={{ opacity: [1, 0.5, 1] }}
+                                            transition={{ duration: 1.5, repeat: Infinity }}
+                                            className="mt-8 text-xl font-semibold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent"
+                                        >
+                                            Crafting your perfect recipe for {servings} {servings === 1 ? 'serving' : 'servings'}...
+                                        </motion.p>
+
+                                        <p className="mt-2 text-slate-500">This may take 15-30 seconds</p>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Recipe Display */}
+                            <AnimatePresence>
+                                {recipe && !loading && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 20 }}
+                                        className="card-premium overflow-hidden"
+                                    >
+                                        {/* Header */}
+                                        <div className="bg-gradient-to-r from-slate-50 to-white p-6 border-b border-slate-200 flex justify-between items-start">
+                                            <div>
+                                                <h2 className="text-3xl font-bold text-slate-900 mb-2">
+                                                    {recipe.recipe?.name || recipe.name || "Generated Recipe"}
+                                                </h2>
+                                                <div className="flex gap-2 flex-wrap">
+                                                    {recipe.recipe?.cuisine && (
+                                                        <span className="badge-accent">
+                                                            🍽️ {recipe.recipe.cuisine}
+                                                        </span>
+                                                    )}
+                                                    {recipe.recipe?.time && (
+                                                        <span className="badge-primary">
+                                                            ⏱️ {recipe.recipe.time}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleFeedback(2)}
+                                                    className={`p-3 rounded-xl transition-all duration-300 ${feedback === 2
+                                                        ? 'bg-success-100 text-success-600 shadow-lg scale-110'
+                                                        : 'hover:bg-slate-100 text-slate-400 hover:text-success-600'
+                                                        }`}
+                                                >
+                                                    <ThumbsUp size={20} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleFeedback(1)}
+                                                    className={`p-3 rounded-xl transition-all duration-300 ${feedback === 1
+                                                        ? 'bg-red-100 text-red-600 shadow-lg scale-110'
+                                                        : 'hover:bg-slate-100 text-slate-400 hover:text-red-600'
+                                                        }`}
+                                                >
+                                                    <ThumbsDown size={20} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className="p-8 grid md:grid-cols-3 gap-8">
+                                            {/* Ingredients */}
+                                            <div className="md:col-span-1 space-y-6">
+                                                <div>
+                                                    <h3 className="font-bold text-lg text-slate-900 mb-4 flex items-center gap-2">
+                                                        <span className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center text-primary-600">🥘</span>
+                                                        Ingredients
+                                                    </h3>
+                                                    <ul className="space-y-2">
+                                                        {(recipe.recipe?.main_ingredients || recipe.main_ingredients || []).map((ing, i) => (
+                                                            <li key={i} className="text-slate-700 flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                                                <span className="w-2 h-2 rounded-full bg-primary-500 mt-2 shrink-0" />
+                                                                <span>{ing}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+
+                                                {(recipe.missing_ingredients?.length > 0) && (
+                                                    <div className="bg-red-50 p-4 rounded-xl border-2 border-red-100">
+                                                        <h3 className="font-bold text-red-700 mb-3 text-sm flex items-center gap-2">
+                                                            <AlertCircle size={16} />
+                                                            Missing Items
+                                                        </h3>
+                                                        <ul className="space-y-1">
+                                                            {recipe.missing_ingredients.map((ing, i) => (
+                                                                <li key={i} className="text-red-600 text-sm flex items-center gap-2">
+                                                                    • {ing}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Steps */}
+                                            <div className="md:col-span-2">
+                                                <h3 className="font-bold text-lg text-slate-900 mb-4 flex items-center gap-2">
+                                                    <span className="w-8 h-8 bg-accent-100 rounded-lg flex items-center justify-center text-accent-600">📝</span>
+                                                    Instructions
+                                                </h3>
+                                                <div className="space-y-4">
+                                                    {/* Handle raw text */}
+                                                    {recipe.raw_text ? (
+                                                        <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl border-2 border-slate-200 shadow-sm">
+                                                            <p className="whitespace-pre-line text-slate-700 leading-relaxed">{recipe.raw_text}</p>
+                                                        </div>
+                                                    ) : typeof (recipe.recipe?.steps || recipe.steps) === 'string' ? (
+                                                        <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl border-2 border-slate-200 shadow-sm">
+                                                            <p className="whitespace-pre-line text-slate-700 leading-relaxed">{recipe.recipe?.steps || recipe.steps}</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-3">
+                                                            {Array.isArray(recipe.recipe?.steps || recipe.steps) && (recipe.recipe?.steps || recipe.steps).map((step, i) => (
+                                                                <motion.div
+                                                                    key={i}
+                                                                    initial={{ opacity: 0, x: -20 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    transition={{ delay: i * 0.1 }}
+                                                                    className="flex gap-4 p-4 bg-white rounded-xl border-2 border-slate-100 hover:border-primary-200 hover:shadow-md transition-all duration-200 group"
+                                                                >
+                                                                    <div className="flex-shrink-0">
+                                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 text-white font-bold flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                                                            {i + 1}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex-1 pt-1">
+                                                                        <p className="text-slate-700 leading-relaxed">{step}</p>
+                                                                    </div>
+                                                                </motion.div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="mt-8 pt-6 border-t border-slate-200 flex justify-end gap-3">
+                                                    <button
+                                                        onClick={() => alert('Video generation feature coming soon!')}
+                                                        className="flex items-center gap-3 px-8 py-4 rounded-xl font-semibold transition-all duration-300 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+                                                    >
+                                                        <Sparkles size={22} />
+                                                        Generate Video
+                                                    </button>
+                                                    <button
+                                                        onClick={handleCooked}
+                                                        disabled={cooked}
+                                                        className={`flex items-center gap-3 px-8 py-4 rounded-xl font-semibold transition-all duration-300 ${cooked
+                                                            ? 'bg-success-100 text-success-700 cursor-default'
+                                                            : 'bg-gradient-to-r from-slate-900 to-slate-700 text-white hover:from-slate-800 hover:to-slate-600 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]'
+                                                            }`}
+                                                    >
+                                                        {cooked ? (
+                                                            <>
+                                                                <CheckCircle size={22} />
+                                                                Marked as Cooked
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <ChefHat size={22} />
+                                                                I Cooked This
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </Layout>
+                    );
+};
+
+                    export default RecipeGenerator;

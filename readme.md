@@ -306,6 +306,11 @@ PantryPilot/
 │   ├── requirements.txt
 │   └── dvc.yaml
 │
+├── model_deployment/                  # Web App (Frontend + Backend)
+│   ├── backend/                       # FastAPI + Llama 3B
+│   ├── frontend/                      # React + Vite
+│   └── model_weights/                 # LoRA adapters
+│
 ├── model_development/                  # Model dev & evaluation
 │   ├── training_pipeline/             # Recipe training data generation (teammate 2)
 │   │   ├── 01_synthetic_generation/
@@ -798,6 +803,27 @@ Request: Quick dinner using mostly my pantry.
   - Returns `(parsed_json, is_valid_json)`
 - **`compute_example_metrics(example, parsed, valid)`** computes:
   - `json_valid_rate`: 1.0 if valid JSON, else 0.0
+
+---
+
+## 🍳 PantryPilot Web Application
+
+We have developed a full-stack web application to serve the fine-tuned model to end users.
+
+**Location:** `model_deployment/`
+
+### Key Features
+- **Interactive Recipe Generator**: Chat interface with the Llama 3.2 3B model.
+- **Smart Inventory Management**: Automatically deducts ingredients from inventory when recipes are cooked.
+- **Servings Scaling**: Adjusts ingredient quantities based on selected servings (1-10).
+- **Premium UI**: React-based interface with engaging animations (Chef Hat 👨‍🍳, OCR scanning).
+
+### Architecture
+- **Frontend**: React, Vite, Tailwind CSS
+- **Backend**: FastAPI, SQLAlchemy, NeonDB
+- **Model**: Local inference of Llama 3.2 3B + LoRA adapters
+
+For detailed setup and usage instructions, please see the [Web App README](model_deployment/README.md).
   - `diet_match_rate`: 1.0 if output respects the requested dietary preference, else 0.0
   - `constraint_violation_rate`: 1.0 if constraints are violated, else 0.0
   - `cuisine_match_rate`: 1.0 if recipe.cuisine matches requested cuisine (if any)

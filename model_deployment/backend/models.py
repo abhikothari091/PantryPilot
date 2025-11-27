@@ -50,6 +50,7 @@ class RecipeHistory(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     recipe_json = Column(JSON) # The full generated recipe
     user_query = Column(String)
+    servings = Column(Integer, default=2)
     feedback_score = Column(Integer, default=0) # 0=None, 1=Dislike, 2=Like
     is_cooked = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -16,6 +16,7 @@ router = APIRouter(
 
 class GenerateRecipeRequest(BaseModel):
     user_request: str
+    servings: int = 2
     compare: bool = False
 
 class FeedbackRequest(BaseModel):
@@ -70,6 +71,7 @@ async def generate_recipe_endpoint(
         user_id=current_user.id,
         recipe_json=recipe_json,
         user_query=body.user_request,
+        servings=body.servings,
         created_at=datetime.utcnow()
     )
     db.add(history_entry)
@@ -101,20 +103,52 @@ def mark_recipe_cooked(recipe_id: int, db: Session = Depends(get_db), current_us
     
     history.is_cooked = True
     
-    # Optionally deduct inventory based on recipe ingredients
-    # This is simplified - in production you'd want more sophisticated matching
-    if history.recipe_json and "main_ingredients" in history.recipe_json:
-        for ing in history.recipe_json["main_ingredients"]:
-            # Try to find matching inventory item
-            # This is a basic implementation - you might want fuzzy matching
-            item_name = ing if isinstance(ing, str) else ing.get("name", "")
-            inventory_item = db.query(InventoryItem).filter(
-                InventoryItem.user_id == current_user.id,
-                InventoryItem.item_name.ilike(f"%{item_name}%")
-            ).first()
+    if history.recipe_json:
+        # Handle nested recipe structure (common in LLM output)
+        recipe_data = history.recipe_json.get("recipe", history.recipe_json)
+        
+        if "main_ingredients" in recipe_data:
+            from utils.smart_inventory import parse_ingredient, convert_unit, is_match, normalize_unit
             
+            # Fetch all user inventory first
+            user_inventory = db.query(InventoryItem).filter(InventoryItem.user_id == current_user.id).all()
+            print(f"🔍 Checking inventory for User {current_user.id}. Found {len(user_inventory)} items.")
+            
+            for ing in recipe_data["main_ingredients"]:
+                ingredient_text = ing if isinstance(ing, str) else ing.get("name", "")
+                if not ingredient_text:
+                    continue
+                
+                # Parse ingredient
+                req_qty, req_unit, req_name = parse_ingredient(ingredient_text)
+                print(f"  Parsed Ingredient: {req_qty} {req_unit} '{req_name}'")
+                
+                # Find matching inventory item
+                for item in user_inventory:
+                    if is_match(item.item_name, req_name):
+                        # Match found!
+                        # Try to convert units
+                        inv_unit = normalize_unit(item.unit)
+                        converted_qty = convert_unit(req_qty, req_unit, inv_unit)
+                        
+                        if converted_qty is not None:
+                            deduction_amount = converted_qty * (history.servings if history.servings else 1)
+                            old_qty = item.quantity
+                            item.quantity = max(0, item.quantity - deduction_amount)
+                            print(f"✅ SMART MATCH! Deducted {deduction_amount:.2f} {item.unit} from {item.item_name} (Was: {old_qty}, Now: {item.quantity})")
+                        else:
+                            # Unit mismatch (e.g. pcs vs lbs), fall back to simple count deduction
+                            deduction_amount = history.servings if history.servings else 1
+                            old_qty = item.quantity
+                            item.quantity = max(0, item.quantity - deduction_amount)
+                            print(f"⚠️ Unit Mismatch ({req_unit} vs {item.unit}). Fallback deduction: {deduction_amount} from {item.item_name}")
+                        
+                        break # Stop checking other inventory items for this ingredient
+    
     db.commit()
     return {"status": "success", "message": "Marked as cooked and inventory updated"}
+
+
 
 @router.get("/history")
 def get_recipe_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -131,3 +165,5 @@ def get_recipe_history(db: Session = Depends(get_db), current_user: User = Depen
         "is_cooked": r.is_cooked,
         "created_at": r.created_at.isoformat()
     } for r in recipes]
+
+

@@ -68,6 +68,32 @@ def delete_inventory_item(item_id: int, db: Session = Depends(get_db), current_u
     db.commit()
     return {"status": "success"}
 
+@router.put("/{item_id}")
+def update_inventory_item(
+    item_id: int,
+    item: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    db_item = db.query(InventoryItem).filter(InventoryItem.id == item_id, InventoryItem.user_id == current_user.id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    db_item.item_name = item.get("item_name", db_item.item_name)
+    if "quantity" in item:
+        db_item.quantity = float(item["quantity"])
+    db_item.unit = item.get("unit", db_item.unit)
+    db_item.category = item.get("category", db_item.category)
+    db.commit()
+    db.refresh(db_item)
+    return {"status": "success", "item": {
+        "id": db_item.id,
+        "item_name": db_item.item_name,
+        "quantity": db_item.quantity,
+        "unit": db_item.unit,
+        "category": db_item.category,
+    }}
+
 @router.post("/upload")
 async def upload_receipt(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     # OCR Logic using external API

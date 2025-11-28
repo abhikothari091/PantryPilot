@@ -13,6 +13,9 @@ const RecipeGenerator = () => {
     const [feedback, setFeedback] = useState(null); // 1 or 2
     const [cooked, setCooked] = useState(false);
     const [error, setError] = useState('');
+    const [inventory, setInventory] = useState([]);
+    const [warning, setWarning] = useState('');
+    const LOW_STOCK_THRESHOLD = 0.1; // treat near-zero as out of stock
 
     const parseSteps = (steps) => {
         // Normalize steps into an array for consistent rendering
@@ -98,6 +101,30 @@ const RecipeGenerator = () => {
         };
     };
 
+    const normalizeName = (str = '') => str.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+    const hasInventoryItem = (name) => {
+        const normName = normalizeName(name);
+        return inventory.some((item) => {
+            const invNorm = normalizeName(item.item_name);
+            return invNorm && normName && (invNorm.includes(normName) || normName.includes(invNorm));
+        });
+    };
+
+    const fetchInventory = React.useCallback(async () => {
+        try {
+            const res = await api.get('/inventory/');
+            setInventory(res.data || []);
+        } catch (e) {
+            console.error('Inventory fetch failed', e);
+        }
+    }, []);
+
+    React.useEffect(() => {
+        // Prefetch inventory to tag depleted items and validate requests
+        fetchInventory();
+    }, [fetchInventory]);
+
     const handleGenerate = async () => {
         if (!query.trim()) return;
 
@@ -106,6 +133,7 @@ const RecipeGenerator = () => {
         setRecipe(null);
         setFeedback(null);
         setCooked(false);
+        setWarning('');
 
         try {
             const res = await api.post('/recipes/generate', {
@@ -116,6 +144,18 @@ const RecipeGenerator = () => {
                 const recipeData = parseRecipeResponse(res.data.data.recipe);
                 setRecipe(recipeData);
                 setHistoryId(res.data.history_id);
+                // refresh inventory to catch latest quantities
+                fetchInventory();
+
+                // Warn if requested protein not in inventory
+                const maybeProtein = query.toLowerCase();
+                const lacksChicken = maybeProtein.includes('chicken') && !hasInventoryItem('chicken');
+                const lacksMain = (recipeData.recipe?.main_ingredients || []).some(
+                    (ing) => !hasInventoryItem(ing)
+                );
+                if (lacksChicken || lacksMain) {
+                    setWarning('Your inventory may be missing some ingredients (e.g., chicken); please verify before cooking.');
+                }
             } else {
                 setError('Failed to generate recipe. Please try again.');
             }
@@ -142,6 +182,7 @@ const RecipeGenerator = () => {
         try {
             await api.post(`/recipes/${historyId}/cooked`);
             setCooked(true);
+            await fetchInventory();
         } catch (err) {
             console.error(err);
         }
@@ -224,6 +265,21 @@ const RecipeGenerator = () => {
                         >
                             <AlertCircle size={20} />
                             <span>{error}</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Warnings */}
+                <AnimatePresence>
+                    {warning && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800"
+                        >
+                            <AlertCircle size={20} />
+                            <span>{warning}</span>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -324,12 +380,31 @@ const RecipeGenerator = () => {
                                             Ingredients
                                         </h3>
                                         <ul className="space-y-2">
-                                            {(recipe.recipe?.main_ingredients || recipe.main_ingredients || []).map((ing, i) => (
-                                                <li key={i} className="text-slate-700 flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
-                                                    <span className="w-2 h-2 rounded-full bg-primary-500 mt-2 shrink-0" />
-                                                    <span>{ing}</span>
-                                                </li>
-                                            ))}
+                                            {(recipe.recipe?.main_ingredients || recipe.main_ingredients || []).map((ing, i) => {
+                                                const ingNorm = normalizeName(ing);
+                                                const invItem = inventory.find((item) => {
+                                                    const invNorm = normalizeName(item.item_name);
+                                                    return invNorm && ingNorm && (invNorm.includes(ingNorm) || ingNorm.includes(invNorm));
+                                                });
+                                                const needsRefill = invItem && Number(invItem.quantity) <= LOW_STOCK_THRESHOLD;
+                                                const missing = !invItem;
+                                                return (
+                                                    <li key={i} className="text-slate-700 flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                                        <span className="w-2 h-2 rounded-full bg-primary-500 mt-2 shrink-0" />
+                                                        <span className="flex-1">{ing}</span>
+                                                        {needsRefill && (
+                                                            <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
+                                                                Refill
+                                                            </span>
+                                                        )}
+                                                        {missing && (
+                                                            <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
+                                                                Missing
+                                                            </span>
+                                                        )}
+                                                    </li>
+                                                );
+                                            })}
                                         </ul>
                                     </div>
 
@@ -428,6 +503,9 @@ const RecipeGenerator = () => {
                                             )}
                                         </button>
                                     </div>
+                                    <p className="mt-4 text-xs text-slate-500">
+                                        Note: Your dietary preferences may affect the AI’s response.
+                                    </p>
                                 </div>
                             </div>
                         </motion.div>

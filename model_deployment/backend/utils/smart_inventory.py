@@ -1,4 +1,5 @@
 import re
+from difflib import SequenceMatcher
 
 # Standard Unit Mappings
 UNIT_MAPPINGS = {
@@ -53,14 +54,9 @@ def normalize_unit(unit_str):
 def parse_ingredient(ingredient_text):
     """
     Parse ingredient string into (quantity, unit, name)
-    Example: "2 lbs Chicken Breast" -> (2.0, "lb", "Chicken Breast")
-             "Chicken Breast (4 oz, sliced)" -> (4.0, "oz", "Chicken Breast")
+    Handles prefixes, parentheticals, and inline numbers.
     """
-    text = ingredient_text.strip()
-
-    # Pattern: leading quantity/unit before the name
-    pattern_prefix = r"([\d\.\/]+)\s*([a-zA-Z]+)?\s+(.*)"
-    match = re.search(pattern_prefix, text)
+    text = str(ingredient_text).strip()
 
     qty = 1.0
     unit = "pcs"
@@ -75,21 +71,30 @@ def parse_ingredient(ingredient_text):
         except Exception:
             return 1.0
 
-    if match:
-        qty_str, unit_str, name_str = match.groups()
+    # Leading qty/unit: "2 lbs chicken breast"
+    prefix = re.search(r"^\s*([\d\.\/]+)\s*([a-zA-Z]+)?\s+(.*)", text)
+    if prefix:
+        qty_str, unit_str, name_str = prefix.groups()
         qty = parse_qty(qty_str)
         unit = normalize_unit(unit_str) or unit
         if unit_str and normalize_unit(unit_str) is None:
             name_str = f"{unit_str} {name_str}"
             unit = "pcs"
-        name_str = name_str.strip()
-    else:
-        # Pattern: name first, quantity/unit in parentheses: "Chicken Breast (4 oz, ...)"
-        paren = re.search(r"^(?P<name>[^()]+)\(\s*(?P<qty>[\d\.\/]+)\s*(?P<unit>[a-zA-Z]+)", text)
-        if paren:
-            name_str = paren.group("name").strip()
-            qty = parse_qty(paren.group("qty"))
-            unit = normalize_unit(paren.group("unit")) or unit
+        return qty, unit, name_str.strip()
+
+    # Parenthetical qty/unit after name: "Chicken Breast (4 oz, sliced)"
+    paren = re.search(r"^(?P<name>[^()]+)\(\s*(?P<qty>[\d\.\/]+)\s*(?P<unit>[a-zA-Z]+)", text)
+    if paren:
+        name_str = paren.group("name").strip()
+        qty = parse_qty(paren.group("qty"))
+        unit = normalize_unit(paren.group("unit")) or unit
+        return qty, unit, name_str.strip()
+
+    # Inline number/unit anywhere: "Chicken Breast 4 oz cut"
+    inline = re.search(r"([\d\.\/]+)\s*([a-zA-Z]+)", text)
+    if inline:
+        qty = parse_qty(inline.group(1))
+        unit = normalize_unit(inline.group(2)) or unit
 
     return qty, unit, name_str.strip()
 
@@ -119,34 +124,47 @@ def convert_unit(qty, from_unit, to_unit):
         
     return None
 
-def is_match(inventory_name, ingredient_name):
+def norm_text(s: str):
+    return re.sub(r"[^a-z0-9\s]", " ", str(s).lower()).strip()
+
+
+def similarity(a: str, b: str) -> float:
+    a_norm = norm_text(a)
+    b_norm = norm_text(b)
+    if not a_norm or not b_norm:
+        return 0.0
+    return SequenceMatcher(None, a_norm, b_norm).ratio()
+
+
+def is_match(inventory_name, ingredient_name, token_threshold: float = 0.45) -> bool:
     """
-    Check if inventory item matches ingredient name.
-    Handles singular/plural and partial matches.
+    Fuzzy match between inventory item and ingredient name.
     """
-    inv = inventory_name.lower()
-    ing = ingredient_name.lower()
-    
-    # Exact match
-    if inv == ing:
+    a_norm = norm_text(inventory_name)
+    b_norm = norm_text(ingredient_name)
+    if not a_norm or not b_norm:
+        return False
+
+    # Token overlap
+    a_tokens = set(a_norm.split())
+    b_tokens = set(b_norm.split())
+    overlap = a_tokens.intersection(b_tokens)
+    if overlap:
         return True
-        
-    # Singular/Plural (Simple heuristic)
-    if inv + "s" == ing or inv + "es" == ing:
-        return True
-    if ing + "s" == inv or ing + "es" == inv:
-        return True
-        
-    # Substring match (Inventory in Ingredient)
-    # e.g. Inv="Chicken", Ing="Boneless Chicken Breast" -> Match
-    # But be careful: Inv="Rice", Ing="Rice Vinegar" -> False Positive?
-    # For now, we assume user wants aggressive matching
-    if inv in ing:
-        return True
-        
-    # Substring match (Ingredient in Inventory)
-    # e.g. Inv="Organic Bananas", Ing="Banana" -> Match
-    if ing in inv:
-        return True
-        
-    return False
+
+    # Similarity score
+    return similarity(a_norm, b_norm) >= token_threshold
+
+
+def find_best_inventory_match(inventory_items, ingredient_name, min_score: float = 0.45):
+    best = None
+    best_score = 0.0
+    ing_norm = norm_text(ingredient_name)
+    for item in inventory_items:
+        score = similarity(item.item_name, ing_norm)
+        if score > best_score:
+            best_score = score
+            best = item
+    if best_score >= min_score:
+        return best, best_score
+    return None, 0.0

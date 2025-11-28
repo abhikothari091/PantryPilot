@@ -8,6 +8,7 @@ from datetime import datetime
 from database import get_db
 from models import RecipeHistory, User, InventoryItem, UserProfile
 from routers.inventory import get_current_user
+from utils.smart_inventory import find_best_inventory_match, convert_unit, parse_ingredient, normalize_unit
 
 router = APIRouter(
     prefix="/recipes",
@@ -29,8 +30,12 @@ async def generate_recipe_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Fetch inventory and preferences
-    inventory_items = db.query(InventoryItem).filter(InventoryItem.user_id == current_user.id).all()
+    # Fetch inventory and preferences (filter out depleted items)
+    inventory_items = (
+        db.query(InventoryItem)
+        .filter(InventoryItem.user_id == current_user.id, InventoryItem.quantity > 0)
+        .all()
+    )
     inventory_list = [{"name": item.item_name, "quantity": item.quantity, "unit": item.unit} for item in inventory_items]
     
     profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
@@ -106,44 +111,39 @@ def mark_recipe_cooked(recipe_id: int, db: Session = Depends(get_db), current_us
     if history.recipe_json:
         # Handle nested recipe structure (common in LLM output)
         recipe_data = history.recipe_json.get("recipe", history.recipe_json)
-        
+
         if "main_ingredients" in recipe_data:
-            from utils.smart_inventory import parse_ingredient, convert_unit, is_match, normalize_unit
-            
             # Fetch all user inventory first
             user_inventory = db.query(InventoryItem).filter(InventoryItem.user_id == current_user.id).all()
             print(f"🔍 Checking inventory for User {current_user.id}. Found {len(user_inventory)} items.")
-            
+
             for ing in recipe_data["main_ingredients"]:
                 ingredient_text = ing if isinstance(ing, str) else ing.get("name", "")
                 if not ingredient_text:
                     continue
-                
-                # Parse ingredient
+
                 req_qty, req_unit, req_name = parse_ingredient(ingredient_text)
                 print(f"  Parsed Ingredient: {req_qty} {req_unit} '{req_name}'")
-                
-                # Find matching inventory item
-                for item in user_inventory:
-                    if is_match(item.item_name, req_name):
-                        # Match found!
-                        # Try to convert units
-                        inv_unit = normalize_unit(item.unit)
-                        converted_qty = convert_unit(req_qty, req_unit, inv_unit)
-                        
-                        if converted_qty is not None:
-                            deduction_amount = converted_qty * (history.servings if history.servings else 1)
-                            old_qty = item.quantity
-                            item.quantity = max(0, item.quantity - deduction_amount)
-                            print(f"✅ SMART MATCH! Deducted {deduction_amount:.2f} {item.unit} from {item.item_name} (Was: {old_qty}, Now: {item.quantity})")
-                        else:
-                            # Unit mismatch (e.g. pcs vs lbs), fall back to simple count deduction
-                            deduction_amount = history.servings if history.servings else 1
-                            old_qty = item.quantity
-                            item.quantity = max(0, item.quantity - deduction_amount)
-                            print(f"⚠️ Unit Mismatch ({req_unit} vs {item.unit}). Fallback deduction: {deduction_amount} from {item.item_name}")
-                        
-                        break # Stop checking other inventory items for this ingredient
+
+                match_item, score = find_best_inventory_match(user_inventory, req_name)
+                if not match_item:
+                    print(f"  ⚠️ No inventory match for '{req_name}'")
+                    continue
+
+                inv_unit = normalize_unit(match_item.unit)
+                converted_qty = convert_unit(req_qty, req_unit, inv_unit)
+
+                if converted_qty is not None:
+                    deduction_amount = converted_qty * (history.servings if history.servings else 1)
+                    old_qty = match_item.quantity
+                    match_item.quantity = max(0, match_item.quantity - deduction_amount)
+                    print(f"✅ MATCH ({score:.2f}) Deducted {deduction_amount:.2f} {match_item.unit} from {match_item.item_name} (Was: {old_qty}, Now: {match_item.quantity})")
+                else:
+                    # Unit mismatch (e.g. pcs vs lbs), fall back to simple count deduction
+                    deduction_amount = history.servings if history.servings else 1
+                    old_qty = match_item.quantity
+                    match_item.quantity = max(0, match_item.quantity - deduction_amount)
+                    print(f"⚠️ Unit mismatch ({req_unit} vs {match_item.unit}). Fallback deduction: {deduction_amount} from {match_item.item_name}")
     
     db.commit()
     return {"status": "success", "message": "Marked as cooked and inventory updated"}
@@ -165,5 +165,3 @@ def get_recipe_history(db: Session = Depends(get_db), current_user: User = Depen
         "is_cooked": r.is_cooked,
         "created_at": r.created_at.isoformat()
     } for r in recipes]
-
-

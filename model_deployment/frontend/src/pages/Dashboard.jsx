@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
-import { Plus, Trash2, Upload, Loader2, Search } from 'lucide-react';
+import { Plus, Trash2, Upload, Loader2, Search, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Dashboard = () => {
@@ -12,6 +12,10 @@ const Dashboard = () => {
     const [detectedItems, setDetectedItems] = useState([]);
     const [newItem, setNewItem] = useState({ item_name: '', quantity: '', unit: 'pcs', category: 'pantry' });
     const [uploading, setUploading] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [confirmEdit, setConfirmEdit] = useState(false);
+    const [pendingEdit, setPendingEdit] = useState(null);
+    const [pendingDelete, setPendingDelete] = useState(null);
 
     const fetchInventory = async () => {
         try {
@@ -21,6 +25,27 @@ const Dashboard = () => {
             console.error(err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleUpdateItem = async () => {
+        if (!pendingEdit) return;
+        try {
+            await api.put(`/inventory/${pendingEdit.id}`, {
+                item_name: pendingEdit.item_name,
+                quantity: parseFloat(pendingEdit.quantity),
+                unit: pendingEdit.unit,
+                category: pendingEdit.category,
+            });
+            setEditingItem(null);
+            setPendingEdit(null);
+            setConfirmEdit(false);
+            fetchInventory();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setConfirmEdit(false);
+            setPendingEdit(null);
         }
     };
 
@@ -43,12 +68,15 @@ const Dashboard = () => {
         }
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async () => {
+        if (!pendingDelete) return;
         try {
-            await api.delete(`/inventory/${id}`);
-            setInventory(inventory.filter(item => item.id !== id));
+            await api.delete(`/inventory/${pendingDelete}`);
+            setInventory(inventory.filter(item => item.id !== pendingDelete));
         } catch (err) {
             console.error(err);
+        } finally {
+            setPendingDelete(null);
         }
     };
 
@@ -178,12 +206,25 @@ const Dashboard = () => {
                                         {item.quantity} {item.unit}
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => handleDelete(item.id)}
-                                    className="text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 transition-colors"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {Number(item.quantity) <= 0.1 && (
+                                        <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
+                                            Refill
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={() => setEditingItem({ ...item })}
+                                        className="text-slate-400 hover:text-primary-600 p-1 rounded-lg hover:bg-primary-50 transition-colors"
+                                    >
+                                        <Edit2 size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => setPendingDelete(item.id)}
+                                        className="text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 transition-colors"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
                             </motion.div>
                         ))}
                     </AnimatePresence>
@@ -366,6 +407,154 @@ const Dashboard = () => {
                     </motion.div>
                 </div>
             )}
+
+            {/* Edit Item Modal */}
+            <AnimatePresence>
+                {editingItem && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+                        >
+                            <h2 className="text-xl font-bold mb-4">Edit Item</h2>
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    setPendingEdit(editingItem);
+                                    setConfirmEdit(true);
+                                }}
+                                className="space-y-4"
+                            >
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Item Name</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="input-field"
+                                        value={editingItem.item_name}
+                                        onChange={e => setEditingItem({ ...editingItem, item_name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            required
+                                            className="input-field"
+                                            value={editingItem.quantity}
+                                            onChange={e => setEditingItem({ ...editingItem, quantity: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Unit</label>
+                                        <select
+                                            className="input-field"
+                                            value={editingItem.unit}
+                                            onChange={e => setEditingItem({ ...editingItem, unit: e.target.value })}
+                                        >
+                                            <option value="pcs">pcs</option>
+                                            <option value="kg">kg</option>
+                                            <option value="g">g</option>
+                                            <option value="oz">oz</option>
+                                            <option value="lb">lb</option>
+                                            <option value="L">L</option>
+                                            <option value="ml">ml</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                                    <select
+                                        className="input-field"
+                                        value={editingItem.category}
+                                        onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}
+                                    >
+                                        <option value="pantry">Pantry</option>
+                                        <option value="produce">Produce</option>
+                                        <option value="dairy">Dairy</option>
+                                        <option value="meat">Meat</option>
+                                        <option value="frozen">Frozen</option>
+                                        <option value="beverages">Beverages</option>
+                                    </select>
+                                </div>
+                                <div className="flex justify-end gap-3 mt-6">
+                                    <button type="button" onClick={() => setEditingItem(null)} className="btn-secondary">Cancel</button>
+                                    <button type="submit" className="btn-primary">Save Changes</button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Confirmation Modal */}
+            <AnimatePresence>
+                {confirmEdit && pendingEdit && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                        onClick={() => setConfirmEdit(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+                        >
+                            <h3 className="text-lg font-semibold text-slate-900 mb-2">Confirm Update</h3>
+                            <p className="text-slate-600 mb-4">
+                                Save changes to <strong>{pendingEdit.item_name}</strong>?
+                            </p>
+                            <div className="flex justify-end gap-3">
+                                <button onClick={() => setConfirmEdit(false)} className="btn-secondary">Cancel</button>
+                                <button onClick={handleUpdateItem} className="btn-primary">Confirm</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {pendingDelete !== null && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                        onClick={() => setPendingDelete(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+                        >
+                            <h3 className="text-lg font-semibold text-slate-900 mb-2">Delete Item</h3>
+                            <p className="text-slate-600 mb-4">
+                                Are you sure you want to delete this item from your inventory?
+                            </p>
+                            <div className="flex justify-end gap-3">
+                                <button onClick={() => setPendingDelete(null)} className="btn-secondary">Cancel</button>
+                                <button onClick={handleDelete} className="btn-primary bg-red-500 hover:bg-red-600 border-red-500">Delete</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </Layout>
     );
 };

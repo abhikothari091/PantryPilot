@@ -1,0 +1,168 @@
+INFO:     Started server process [22253]
+INFO:     Waiting for application startup.
+`torch_dtype` is deprecated! Use `dtype` instead!
+🚀 Initializing PantryPilot Backend...
+🖥️  Using device: mps
+📥 Loading base model: meta-llama/Llama-3.2-3B-Instruct
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:04<00:04,  4.59s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:06<00:00,  2.99s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:06<00:00,  3.23s/it]
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+✅ Base model loaded (~6GB memory)
+📥 Loading LoRA adapter: /Users/DELL/PantryPilot/PantryPilot-1/PantryPilot/PantryPilot/model_deployment/model_weights/adapter
+✅ Fine-tuned model loaded (base + adapter)
+✅ Model Service Ready
+INFO:     127.0.0.1:52084 - "POST /auth/token HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52087 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52121 - "POST /auth/token HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52121 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52121 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52121 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52126 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52121 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52126 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52129 - "OPTIONS /inventory/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52129 - "POST /inventory/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52129 - "OPTIONS /inventory/confirm_upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52129 - "POST /inventory/confirm_upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52129 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52144 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52144 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52146 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52146 - "PUT /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52149 - "OPTIONS /recipes/generate HTTP/1.1" 200 OK
+🤖 Generating recipe with Fine-tuned model...
+INFO:     127.0.0.1:52149 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52179 - "OPTIONS /recipes/28/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52179 - "POST /recipes/28/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52179 - "OPTIONS /recipes/28/cooked HTTP/1.1" 200 OK
+🔍 Checking inventory for User 1. Found 22 items.
+  Parsed Ingredient: 4.0 None 'oz)'
+  Parsed Ingredient: 1.0 None 'cup)'
+  Parsed Ingredient: 2.0 None 'cups)'
+  Parsed Ingredient: 2.0 None 'oz)'
+  Parsed Ingredient: 1.0 pcs 'Crackers (4-6)'
+⚠️ Unit Mismatch (pcs vs oz). Fallback deduction: 2 from Crackers
+  Parsed Ingredient: 2.0 None 'tbsp)'
+  Parsed Ingredient: 0.25 None 'cup)'
+INFO:     127.0.0.1:52179 - "POST /recipes/28/cooked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52179 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52181 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52179 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52181 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52201 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52203 - "GET /users/profile HTTP/1.1" 200 OK
+🤖 Generating recipe with Fine-tuned model...
+INFO:     127.0.0.1:52252 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52303 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52305 - "GET /recipes/history HTTP/1.1" 200 OK
+🤖 Generating recipe with Fine-tuned model...
+INFO:     127.0.0.1:52310 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52335 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52335 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52347 - "POST /auth/token HTTP/1.1" 200 OK
+🤖 Generating recipe with Fine-tuned model...
+INFO:     127.0.0.1:52354 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52384 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52385 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52385 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52384 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52384 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52385 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52388 - "OPTIONS /recipes/generate HTTP/1.1" 200 OK
+🤖 Generating recipe with Fine-tuned model...
+INFO:     127.0.0.1:52388 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52394 - "OPTIONS /recipes/32/cooked HTTP/1.1" 200 OK
+🔍 Checking inventory for User 1. Found 22 items.
+  Parsed Ingredient: 4.0 None 'oz, cut into bite-sized pieces)'
+  Parsed Ingredient: 2.0 None 'tbsp)'
+  Parsed Ingredient: 1.0 None 'tbsp)'
+  Parsed Ingredient: 1.0 None 'tbsp)'
+  Parsed Ingredient: 1.0 None 'cup)'
+  Parsed Ingredient: 1.0 None 'cup, shredded)'
+  Parsed Ingredient: 1.0 None 'cup, sliced)'
+  Parsed Ingredient: 1.0 pcs 'Crackers (for serving)'
+⚠️ Unit Mismatch (pcs vs oz). Fallback deduction: 2 from Crackers
+INFO:     127.0.0.1:52394 - "POST /recipes/32/cooked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52450 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52451 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52450 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52451 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52456 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52456 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52463 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52464 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52464 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52463 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52471 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52471 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52477 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52479 - "GET /recipes/history HTTP/1.1" 200 OK
+🤖 Generating recipe with Fine-tuned model...
+INFO:     127.0.0.1:52483 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52497 - "OPTIONS /recipes/33/cooked HTTP/1.1" 200 OK
+🔍 Checking inventory for User 1. Found 22 items.
+  Parsed Ingredient: 0.5 None 'pound)'
+  Parsed Ingredient: 1.0 None 'cup)'
+  Parsed Ingredient: 1.0 None 'medium)'
+  Parsed Ingredient: 8.0 None 'crackers)'
+⚠️ Unit Mismatch (None vs oz). Fallback deduction: 2 from Crackers
+INFO:     127.0.0.1:52497 - "POST /recipes/33/cooked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52499 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52499 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52499 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52501 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52501 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52499 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52517 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52520 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52520 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52517 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52517 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52520 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52517 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52520 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52556 - "POST /auth/token HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52561 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52565 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52651 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52651 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52651 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52653 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52653 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52651 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52660 - "OPTIONS /recipes/generate HTTP/1.1" 200 OK
+🤖 Generating recipe with Fine-tuned model...
+INFO:     127.0.0.1:52660 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52677 - "OPTIONS /recipes/34/cooked HTTP/1.1" 200 OK
+🔍 Checking inventory for User 1. Found 22 items.
+  Parsed Ingredient: 1.0 pcs 'Chicken Breast (400g)'
+⚠️ Unit Mismatch (pcs vs kg). Fallback deduction: 2 from Chicken Breast
+  Parsed Ingredient: 1.0 pcs 'Deli Meat (100g)'
+⚠️ Unit Mismatch (pcs vs oz). Fallback deduction: 2 from Deli Meat
+  Parsed Ingredient: 1.0 pcs 'Fruit Snacks (for garnish)'
+⚠️ Unit Mismatch (pcs vs oz). Fallback deduction: 2 from Fruit Snacks
+  Parsed Ingredient: 1.0 pcs 'Lettuce (for garnish)'
+⚠️ Unit Mismatch (pcs vs head). Fallback deduction: 2 from Lettuce
+  Parsed Ingredient: 1.0 pcs 'Tomato (for garnish)'
+⚠️ Unit Mismatch (pcs vs lbs). Fallback deduction: 2 from Tomato
+  Parsed Ingredient: 1.0 pcs 'BBQ Sauce (60g)'
+⚠️ Unit Mismatch (pcs vs oz). Fallback deduction: 2 from BBQ Sauce
+INFO:     127.0.0.1:52677 - "POST /recipes/34/cooked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52682 - "OPTIONS /recipes/34/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52682 - "POST /recipes/34/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52682 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52684 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52682 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52684 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52684 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52682 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52713 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52715 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52719 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52721 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52719 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52721 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52721 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52719 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52719 - "OPTIONS /inventory/58 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52719 - "DELETE /inventory/58 HTTP/1.1" 200 OK

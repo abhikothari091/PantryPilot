@@ -54,39 +54,44 @@ def parse_ingredient(ingredient_text):
     """
     Parse ingredient string into (quantity, unit, name)
     Example: "2 lbs Chicken Breast" -> (2.0, "lb", "Chicken Breast")
+             "Chicken Breast (4 oz, sliced)" -> (4.0, "oz", "Chicken Breast")
     """
-    # Regex for "Number Unit Name" or "Number Name"
-    # Handles fractions (1/2) and decimals (1.5)
-    pattern = r"([\d\.\/]+)\s*([a-zA-Z]+)?\s+(.*)"
-    match = re.search(pattern, ingredient_text)
-    
+    text = ingredient_text.strip()
+
+    # Pattern: leading quantity/unit before the name
+    pattern_prefix = r"([\d\.\/]+)\s*([a-zA-Z]+)?\s+(.*)"
+    match = re.search(pattern_prefix, text)
+
+    qty = 1.0
+    unit = "pcs"
+    name_str = text
+
+    def parse_qty(qs):
+        try:
+            if "/" in qs:
+                num, den = map(float, qs.split("/"))
+                return num / den
+            return float(qs)
+        except Exception:
+            return 1.0
+
     if match:
         qty_str, unit_str, name_str = match.groups()
-        
-        # Parse quantity
-        try:
-            if '/' in qty_str:
-                num, den = map(float, qty_str.split('/'))
-                qty = num / den
-            else:
-                qty = float(qty_str)
-        except:
-            qty = 1.0 # Default if parse fails
-            
-        # Normalize unit
-        unit = normalize_unit(unit_str)
-        
-        # If unit is None or not in our map, it might be part of the name
-        # e.g. "2 Chicken Breasts" -> unit="Chicken", name="Breasts" (Wrong)
-        # Better heuristic: check if unit_str is a known unit
+        qty = parse_qty(qty_str)
+        unit = normalize_unit(unit_str) or unit
         if unit_str and normalize_unit(unit_str) is None:
-            # It's likely part of the name
             name_str = f"{unit_str} {name_str}"
-            unit = "pcs" # Default to pieces if no known unit found
-            
-        return qty, unit, name_str.strip()
-    
-    return 1.0, "pcs", ingredient_text.strip()
+            unit = "pcs"
+        name_str = name_str.strip()
+    else:
+        # Pattern: name first, quantity/unit in parentheses: "Chicken Breast (4 oz, ...)"
+        paren = re.search(r"^(?P<name>[^()]+)\(\s*(?P<qty>[\d\.\/]+)\s*(?P<unit>[a-zA-Z]+)", text)
+        if paren:
+            name_str = paren.group("name").strip()
+            qty = parse_qty(paren.group("qty"))
+            unit = normalize_unit(paren.group("unit")) or unit
+
+    return qty, unit, name_str.strip()
 
 def convert_unit(qty, from_unit, to_unit):
     """

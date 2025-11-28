@@ -41,9 +41,18 @@ class ModelService:
         # Load fine-tuned model with LoRA adapter
         if Path(adapter_path).exists():
             print(f"📥 Loading LoRA adapter: {adapter_path}")
-            self.finetuned_model = PeftModel.from_pretrained(self.base_model, adapter_path)
-            self.finetuned_model.eval()
-            print(f"✅ Fine-tuned model loaded (base + 35MB adapter)")
+            try:
+                self.finetuned_model = PeftModel.from_pretrained(
+                    self.base_model,
+                    adapter_path,
+                    is_trainable=False,
+                    local_files_only=True,
+                )
+                self.finetuned_model.eval()
+                print("✅ Fine-tuned model loaded (base + adapter)")
+            except Exception as e:
+                print(f"⚠️ Failed to load LoRA adapter, continuing with base model only: {e}")
+                self.finetuned_model = None
         else:
             print(f"⚠️  LoRA adapter not found at {adapter_path}")
             self.finetuned_model = None

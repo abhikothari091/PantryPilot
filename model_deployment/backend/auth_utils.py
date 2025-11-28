@@ -9,7 +9,9 @@ SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey") # Change this in producti
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Prefer pbkdf2 to avoid bcrypt backend issues on some platforms, but still
+# accept existing bcrypt hashes for compatibility.
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)

@@ -14,28 +14,88 @@ const RecipeGenerator = () => {
     const [cooked, setCooked] = useState(false);
     const [error, setError] = useState('');
 
-    const parseRecipeResponse = (content) => {
-        // Handle various response formats
-        if (typeof content === 'object' && content !== null) {
-            return content;
+    const parseSteps = (steps) => {
+        // Normalize steps into an array for consistent rendering
+        if (Array.isArray(steps)) {
+            return steps.map((s) => (typeof s === 'string' ? s.trim() : '')).filter(Boolean);
+        }
+        if (typeof steps !== 'string') return [];
+
+        const cleaned = steps.replace(/\r/g, '').trim();
+        if (!cleaned) return [];
+
+        // Helper: split when "Step 1.", "Step 2." markers appear anywhere (not just newlines)
+        const splitByMarkers = (text) => {
+            const markers = [...text.matchAll(/step\s*\d+[\.:\-]?\s*/gi)];
+            if (markers.length === 0) return [];
+            const parts = [];
+            markers.forEach((m, idx) => {
+                const start = m.index + m[0].length;
+                const end = idx + 1 < markers.length ? markers[idx + 1].index : text.length;
+                const chunk = text.slice(start, end).trim();
+                if (chunk) parts.push(chunk);
+            });
+            return parts;
+        };
+
+        const stepParts = splitByMarkers(cleaned);
+        if (stepParts.length) {
+            return stepParts;
         }
 
-        if (typeof content === 'string') {
+        // Bullet list (lines starting with "- " or "* ")
+        const bulletMatches = cleaned.match(/^\s*[-*]\s+/m);
+        if (bulletMatches) {
+            return cleaned
+                .split(/\n+/)
+                .map((line) => line.replace(/^\s*[-*]\s+/, '').trim())
+                .filter(Boolean);
+        }
+
+        // If the model used "Step 1." with newlines, split on line-based markers
+        const stepRegex = /(?:^|\n)\s*Step\s*\d+[\.\:\-\s]*/gi;
+        if (cleaned.match(stepRegex)) {
+            return cleaned
+                .split(stepRegex)
+                .map((s) => s.trim())
+                .filter(Boolean);
+        }
+
+        // Fallback: split on newlines or sentences
+        return cleaned
+            .split(/\n+/)
+            .flatMap((chunk) => chunk.split(/(?<=[\.!?])\s+/))
+            .map((s) => s.trim())
+            .filter(Boolean);
+    };
+
+    const parseRecipeResponse = (content) => {
+        // Handle various response formats and surface parsed steps
+        let parsed = { raw_text: 'Unable to parse recipe' };
+
+        if (typeof content === 'object' && content !== null) {
+            parsed = content;
+        } else if (typeof content === 'string') {
             try {
-                // Try to find and parse JSON in the string
                 const jsonMatch = content.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
-                    return JSON.parse(jsonMatch[0]);
+                    parsed = JSON.parse(jsonMatch[0]);
+                } else {
+                    parsed = { raw_text: content };
                 }
-                // If no JSON found, return as raw text
-                return { raw_text: content };
-            } catch (e) {
-                // If parsing fails, return as raw text
-                return { raw_text: content };
+            } catch {
+                parsed = { raw_text: content };
             }
         }
 
-        return { raw_text: 'Unable to parse recipe' };
+        const recipeNode = parsed.recipe || parsed;
+        const stepsFromRecipe = parseSteps(recipeNode.steps);
+        const stepsFromRaw = stepsFromRecipe.length ? stepsFromRecipe : parseSteps(parsed.raw_text || '');
+
+        return {
+            ...parsed,
+            parsedSteps: stepsFromRecipe.length ? stepsFromRecipe : stepsFromRaw,
+        };
     };
 
     const handleGenerate = async () => {
@@ -297,37 +357,45 @@ const RecipeGenerator = () => {
                                         Instructions
                                     </h3>
                                     <div className="space-y-4">
-                                        {/* Handle raw text */}
-                                        {recipe.raw_text ? (
-                                            <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl border-2 border-slate-200 shadow-sm">
-                                                <p className="whitespace-pre-line text-slate-700 leading-relaxed">{recipe.raw_text}</p>
-                                            </div>
-                                        ) : typeof (recipe.recipe?.steps || recipe.steps) === 'string' ? (
-                                            <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl border-2 border-slate-200 shadow-sm">
-                                                <p className="whitespace-pre-line text-slate-700 leading-relaxed">{recipe.recipe?.steps || recipe.steps}</p>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-3">
-                                                {Array.isArray(recipe.recipe?.steps || recipe.steps) && (recipe.recipe?.steps || recipe.steps).map((step, i) => (
-                                                    <motion.div
-                                                        key={i}
-                                                        initial={{ opacity: 0, x: -20 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: i * 0.1 }}
-                                                        className="flex gap-4 p-4 bg-white rounded-xl border-2 border-slate-100 hover:border-primary-200 hover:shadow-md transition-all duration-200 group"
-                                                    >
-                                                        <div className="flex-shrink-0">
-                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 text-white font-bold flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                                                {i + 1}
+                                        {(() => {
+                                            const stepsToRender = recipe.parsedSteps?.length
+                                                ? recipe.parsedSteps
+                                                : parseSteps(recipe.raw_text || recipe.recipe?.steps || recipe.steps || '');
+
+                                            if (!stepsToRender.length && recipe.raw_text) {
+                                                return (
+                                                    <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl border-2 border-slate-200 shadow-sm">
+                                                        <p className="whitespace-pre-line text-slate-700 leading-relaxed">{recipe.raw_text}</p>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div className="grid grid-cols-1 gap-4">
+                                                    {stepsToRender.map((step, i) => (
+                                                        <motion.div
+                                                            key={i}
+                                                            initial={{ opacity: 0, y: 12 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            transition={{ delay: i * 0.08 }}
+                                                            className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-lg transition-all duration-200 group"
+                                                        >
+                                                            <div className="absolute -left-10 -top-10 w-28 h-28 bg-gradient-to-br from-accent-100 to-primary-100 rounded-full blur-2xl opacity-70 group-hover:opacity-90 transition-opacity" />
+                                                            <div className="relative p-5 flex gap-4">
+                                                                <div className="flex-shrink-0">
+                                                                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-600 to-accent-500 text-white font-bold flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                                                        {i + 1}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <p className="text-slate-800 leading-relaxed">{step}</p>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <div className="flex-1 pt-1">
-                                                            <p className="text-slate-700 leading-relaxed">{step}</p>
-                                                        </div>
-                                                    </motion.div>
-                                                ))}
-                                            </div>
-                                        )}
+                                                        </motion.div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
 
                                     {/* Actions */}

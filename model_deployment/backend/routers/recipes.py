@@ -4,16 +4,13 @@ from typing import List, Optional
 from pydantic import BaseModel
 import json
 from datetime import datetime
+import os
+import time
 
 from database import get_db
 from models import RecipeHistory, User, InventoryItem, UserProfile
 from routers.inventory import get_current_user
 from utils.smart_inventory import find_best_inventory_match, convert_unit, parse_ingredient, normalize_unit
-
-router = APIRouter(
-    prefix="/recipes",
-    tags=["recipes"],
-)
 
 class GenerateRecipeRequest(BaseModel):
     user_request: str
@@ -22,6 +19,29 @@ class GenerateRecipeRequest(BaseModel):
 
 class FeedbackRequest(BaseModel):
     score: int # 1=Dislike, 2=Like
+
+class VideoGenerateRequest(BaseModel):
+    prompt: str
+
+router = APIRouter(
+    prefix="/recipes",
+    tags=["recipes"],
+)
+
+# Video generation configuration
+VIDEO_GEN_ENABLED = os.getenv("VIDEO_GEN_ENABLED", "false").lower() == "true"
+VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1-generate-preview")
+VIDEO_GEN_API_KEY = os.getenv("VIDEO_GEN_API_KEY")
+VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "120"))
+VIDEO_GEN_POLL_SECONDS = int(os.getenv("VIDEO_GEN_POLL_SECONDS", "5"))
+VIDEO_FALLBACK_URL = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+
+try:
+    import google.genai as genai
+    from google.genai import types as genai_types
+except Exception:
+    genai = None
+    genai_types = None
 
 @router.post("/generate")
 async def generate_recipe_endpoint(
@@ -221,3 +241,50 @@ def get_recipe_history(db: Session = Depends(get_db), current_user: User = Depen
         "is_cooked": r.is_cooked,
         "created_at": r.created_at.isoformat()
     } for r in recipes]
+
+
+@router.post("/video")
+def generate_recipe_video(body: VideoGenerateRequest):
+    """
+    Generate a recipe video. Defaults to a mock URL; when VIDEO_GEN_ENABLED is true and the
+    Google GenAI client plus API key are present, attempts a live generation. Falls back to
+    mock on errors to avoid breaking UX.
+    """
+    prompt = body.prompt.strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Prompt is required")
+
+    video_url = VIDEO_FALLBACK_URL
+    mode = "mock"
+
+    if VIDEO_GEN_ENABLED and genai and VIDEO_GEN_API_KEY:
+        try:
+            client = genai.Client(api_key=VIDEO_GEN_API_KEY)
+            operation = client.models.generate_videos(
+                model=VIDEO_GEN_MODEL,
+                prompt=prompt,
+            )
+
+            start_time = time.time()
+            while not operation.done:
+                if time.time() - start_time > VIDEO_GEN_TIMEOUT:
+                    raise HTTPException(status_code=504, detail="Video generation timed out")
+                time.sleep(max(1, VIDEO_GEN_POLL_SECONDS))
+                operation = client.operations.get(operation)
+
+            generated_video = operation.response.generated_videos[0]
+            # Prefer streaming URI if available
+            if hasattr(generated_video.video, "uri"):
+                video_url = generated_video.video.uri
+            else:
+                video_url = VIDEO_FALLBACK_URL
+            mode = "live"
+        except HTTPException:
+            raise
+        except Exception as e:
+            # Silent fallback keeps the front end stable
+            print(f"Video generation failed, falling back to mock: {e}")
+            video_url = VIDEO_FALLBACK_URL
+            mode = "mock"
+
+    return {"status": "success", "video_url": video_url, "mode": mode}

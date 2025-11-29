@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
 import { Send, ThumbsUp, ThumbsDown, CheckCircle, Loader2, Sparkles, ChefHat, AlertCircle } from 'lucide-react';
@@ -16,6 +16,17 @@ const RecipeGenerator = () => {
     const [inventory, setInventory] = useState([]);
     const [warning, setWarning] = useState('');
     const LOW_STOCK_THRESHOLD = 0.1; // treat near-zero as out of stock
+
+    // Video generation (mock-ready, flag-gated)
+    const [showVideoModal, setShowVideoModal] = useState(false);
+    const [videoGenerating, setVideoGenerating] = useState(false);
+    const [videoProgress, setVideoProgress] = useState(0);
+    const [videoUrl, setVideoUrl] = useState('');
+    const [videoError, setVideoError] = useState('');
+    const progressTimerRef = useRef(null);
+    const VIDEO_MOCK_URL = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'; // lightweight sample for mock mode
+
+    React.useEffect(() => () => cleanupProgressTimer(), []);
 
     const parseSteps = (steps) => {
         // Normalize steps into an array for consistent rendering
@@ -258,6 +269,53 @@ const RecipeGenerator = () => {
         } catch (err) {
             console.error(err);
         }
+    };
+
+    const cleanupProgressTimer = () => {
+        if (progressTimerRef.current) {
+            clearInterval(progressTimerRef.current);
+            progressTimerRef.current = null;
+        }
+    };
+
+    const handleVideoConfirm = async () => {
+        setShowVideoModal(false);
+        setVideoError('');
+        setVideoUrl('');
+        setVideoGenerating(true);
+        setVideoProgress(0);
+
+        try {
+            const prompt =
+                recipe?.recipe?.name ||
+                recipe?.name ||
+                (query ? `Cooking video for: ${query}` : 'Cooking video');
+
+            // lightweight progress simulation while backend works
+            cleanupProgressTimer();
+            setVideoProgress(12);
+            progressTimerRef.current = setInterval(() => {
+                setVideoProgress((p) => Math.min(90, p + 6 + Math.random() * 4));
+            }, 320);
+
+            const res = await api.post('/recipes/video', { prompt });
+            const url = res?.data?.video_url || VIDEO_MOCK_URL;
+            setVideoUrl(url);
+            setVideoProgress(100);
+        } catch (err) {
+            console.error('Video generation failed', err);
+            setVideoError('Video generation failed. Please try again.');
+        } finally {
+            cleanupProgressTimer();
+            setVideoGenerating(false);
+        }
+    };
+
+    const videoStatusLabel = () => {
+        if (videoGenerating) return 'Generating video...';
+        if (videoUrl) return 'Video ready';
+        if (videoError) return videoError || 'Video unavailable';
+        return '';
     };
 
     return (
@@ -548,7 +606,7 @@ const RecipeGenerator = () => {
                                     {/* Actions */}
                                     <div className="mt-8 pt-6 border-t border-slate-200 flex justify-end gap-3">
                                         <button
-                                            onClick={() => alert('Video generation feature coming soon!')}
+                                            onClick={() => setShowVideoModal(true)}
                                             className="flex items-center gap-3 px-8 py-4 rounded-xl font-semibold transition-all duration-300 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
                                         >
                                             <Sparkles size={22} />
@@ -575,6 +633,34 @@ const RecipeGenerator = () => {
                                             )}
                                         </button>
                                     </div>
+                                    {/* Video Preview / Streaming */}
+                                    {(videoGenerating || videoUrl || videoError) && (
+                                        <div className="mt-6 border border-dashed border-slate-200 rounded-2xl p-4 bg-slate-50">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <p className="text-sm font-semibold text-slate-800">Video preview</p>
+                                                <p className="text-xs text-slate-500">{videoStatusLabel()}</p>
+                                                {videoGenerating && <Loader2 className="animate-spin text-primary-500" size={18} />}
+                                            </div>
+                                            {videoGenerating && (
+                                                <div className="w-full bg-white rounded-xl border border-slate-200 h-3 overflow-hidden mb-3">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-primary-500 to-accent-500 transition-all duration-200"
+                                                        style={{ width: `${videoProgress}%` }}
+                                                    />
+                                                </div>
+                                            )}
+                                            {videoUrl && (
+                                                <div className="rounded-xl overflow-hidden border border-slate-200 bg-black">
+                                                    <video src={videoUrl} controls className="w-full max-h-96" />
+                                                </div>
+                                            )}
+                                            {videoError && (
+                                                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                                    {videoError}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                     <p className="mt-4 text-xs text-slate-500">
                                         Note: Your dietary preferences may affect the AI’s response.
                                     </p>
@@ -584,6 +670,56 @@ const RecipeGenerator = () => {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Video Confirmation Modal */}
+            <AnimatePresence>
+                {showVideoModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                        onClick={() => setShowVideoModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200"
+                        >
+                            <div className="flex items-start gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-accent-100 text-accent-600 flex items-center justify-center">
+                                    <Sparkles size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-900">Generate cooking video?</h3>
+                                    <p className="text-slate-600 text-sm mt-1">
+                                        We’ll create a short walkthrough for “{recipe?.recipe?.name || recipe?.name || 'this recipe'}”.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-600 mb-4">
+                                <p className="font-semibold text-slate-800 mb-1">What happens next</p>
+                                <p>We start generation and show the video when it is ready.</p>
+                            </div>
+
+                            <div className="flex justify-end gap-3">
+                                <button onClick={() => setShowVideoModal(false)} className="btn-secondary">
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleVideoConfirm}
+                                    className="btn-primary bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400"
+                                >
+                                    Start Generation
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </Layout>
     );
 };

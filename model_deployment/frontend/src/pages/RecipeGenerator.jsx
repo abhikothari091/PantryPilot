@@ -80,11 +80,83 @@ const RecipeGenerator = () => {
             parsed = content;
         } else if (typeof content === 'string') {
             try {
-                const jsonMatch = content.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    parsed = JSON.parse(jsonMatch[0]);
+                // 1. Try to find JSON inside markdown code blocks first
+                const codeBlockMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+                if (codeBlockMatch) {
+                    parsed = JSON.parse(codeBlockMatch[1]);
                 } else {
-                    parsed = { raw_text: content };
+                    // 2. Fallback: Find the first valid JSON object in the text
+                    const firstOpen = content.indexOf('{');
+                    if (firstOpen !== -1) {
+                        // Try to find the matching closing brace by counting
+                        let balance = 0;
+                        let lastClose = -1;
+                        let inString = false;
+                        let escape = false;
+
+                        for (let i = firstOpen; i < content.length; i++) {
+                            const char = content[i];
+
+                            if (escape) {
+                                escape = false;
+                                continue;
+                            }
+
+                            if (char === '\\') {
+                                escape = true;
+                                continue;
+                            }
+
+                            if (char === '"') {
+                                inString = !inString;
+                                continue;
+                            }
+
+                            if (!inString) {
+                                if (char === '{') {
+                                    balance++;
+                                } else if (char === '}') {
+                                    balance--;
+                                    if (balance === 0) {
+                                        lastClose = i;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (lastClose !== -1) {
+                            try {
+                                parsed = JSON.parse(content.substring(firstOpen, lastClose + 1));
+                            } catch (e) {
+                                // If that fails, try the greedy match as a last resort (though unlikely to help if balanced failed)
+                                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                                if (jsonMatch) {
+                                    try {
+                                        parsed = JSON.parse(jsonMatch[0]);
+                                    } catch {
+                                        parsed = { raw_text: content };
+                                    }
+                                } else {
+                                    parsed = { raw_text: content };
+                                }
+                            }
+                        } else {
+                            // No balanced closing brace found, try greedy
+                            const jsonMatch = content.match(/\{[\s\S]*\}/);
+                            if (jsonMatch) {
+                                try {
+                                    parsed = JSON.parse(jsonMatch[0]);
+                                } catch {
+                                    parsed = { raw_text: content };
+                                }
+                            } else {
+                                parsed = { raw_text: content };
+                            }
+                        }
+                    } else {
+                        parsed = { raw_text: content };
+                    }
                 }
             } catch {
                 parsed = { raw_text: content };

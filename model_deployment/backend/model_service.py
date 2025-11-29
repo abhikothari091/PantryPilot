@@ -1,163 +1,98 @@
 """
-PyTorch Model Service with Llama 3B + LoRA adapter
-Supports base model vs fine-tuned model comparison
+External API Model Service
+Replaces local Llama 3B model with external API call
 """
 
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import PeftModel
-from pathlib import Path
+import requests
+import json
 from typing import List, Dict, Optional
 import os
 
-
 class ModelService:
-    def __init__(self, base_model_id: str, adapter_path: str):
+    def __init__(self):
         """
-        Initialize model service with Llama 3B base model and LoRA adapter
-
-        Args:
-            base_model_id: HuggingFace model ID (meta-llama/Llama-3.2-3B-Instruct)
-            adapter_path: Path to LoRA adapter weights
+        Initialize model service for external API
         """
-        self.base_model_id = base_model_id
-        self.adapter_path = adapter_path
-        self.device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
-
-        print(f"🖥️  Using device: {self.device}")
-        print(f"📥 Loading base model: {base_model_id}")
-
-        # Load tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(base_model_id)
-
-        # Load base model
-        self.base_model = AutoModelForCausalLM.from_pretrained(
-            base_model_id,
-            torch_dtype=torch.float16,
-        ).to(self.device) # Explicitly move to device
-
-        print(f"✅ Base model loaded (~6GB memory)")
-
-        # Load fine-tuned model with LoRA adapter
-        if Path(adapter_path).exists():
-            print(f"📥 Loading LoRA adapter: {adapter_path}")
-            try:
-                self.finetuned_model = PeftModel.from_pretrained(
-                    self.base_model,
-                    adapter_path,
-                    is_trainable=False,
-                    local_files_only=True,
-                )
-                self.finetuned_model.eval()
-                print("✅ Fine-tuned model loaded (base + adapter)")
-            except Exception as e:
-                print(f"⚠️ Failed to load LoRA adapter, continuing with base model only: {e}")
-                self.finetuned_model = None
-        else:
-            print(f"⚠️  LoRA adapter not found at {adapter_path}")
-            self.finetuned_model = None
-
-    def _format_prompt(self, inventory: List[Dict], preferences: Dict, user_request: str) -> str:
-        """Format user input into ChatML template (matching training data)"""
-
-        # Build inventory list (names only, matching training data format)
-        inventory_items = [item['name'] for item in inventory]
-        inventory_str = ", ".join(inventory_items)
-
-        # Extract dietary preference (use first one if multiple, matching training data)
-        preference = None
-        if preferences.get("dietary_restrictions"):
-            dietary_restrictions = preferences["dietary_restrictions"]
-            if dietary_restrictions:
-                preference = dietary_restrictions[0].lower()
-
-        # System prompt (matching training data)
-        system_prompt = "You are a recipe generation AI that creates recipes based on user inventory and preferences."
-
-        # Build user message in training format
-        if user_request:
-            user_content = f"{user_request}\n\nI have {inventory_str}."
-            if preference:
-                user_content += f" I want a {preference} recipe."
-        else:
-            user_content = f"I have {inventory_str}."
-            if preference:
-                user_content += f" I want a {preference} recipe."
-
-        # ChatML format (matching training data)
-        prompt = f"""<|im_start|>system
-{system_prompt}<|im_end|>
-<|im_start|>user
-{user_content}<|im_end|>
-<|im_start|>assistant
-"""
-
-        return prompt
+        self.api_url = "https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe"
+        print(f"🔗 Initialized External Model Service: {self.api_url}")
 
     def generate_recipe(
         self,
         inventory: List[Dict],
         preferences: Dict,
         user_request: str = "",
-        use_finetuned: bool = True,
-        max_tokens: int = 512,
-        temperature: float = 0.7,
-        top_p: float = 0.9
+        use_finetuned: bool = True, # Kept for compatibility signature
+        max_tokens: int = 512,      # Kept for compatibility signature
+        temperature: float = 0.7,   # Kept for compatibility signature
+        top_p: float = 0.9          # Kept for compatibility signature
     ) -> str:
         """
-        Generate a recipe using either base or fine-tuned model
-
+        Generate a recipe using external API
+        
         Args:
             inventory: List of available ingredients
             preferences: User preferences including dietary restrictions
             user_request: Optional natural language request
-            use_finetuned: Use fine-tuned model (True) or base model (False)
-            max_tokens: Maximum tokens to generate
-            temperature: Sampling temperature
-            top_p: Nucleus sampling parameter
-
+            
         Returns:
-            Generated recipe text
+            Generated recipe text (JSON string)
         """
-        prompt = self._format_prompt(inventory, preferences, user_request)
+        print(f"🚀 Calling external API for: {user_request}")
+        
+        # Map preferences to API format
+        # Local preferences: {"dietary_restrictions": [...], "allergies": [...], "favorite_cuisines": [...]}
+        # API preferences: {"dietary_restrictions": [], "cooking_style": "balanced", "custom_preferences": ""}
+        
+        api_preferences = {
+            "dietary_restrictions": preferences.get("dietary_restrictions", []),
+            "cooking_style": "balanced", # Default
+            "custom_preferences": ""
+        }
+        
+        # Add allergies to custom preferences if present
+        if preferences.get("allergies"):
+            allergies = ", ".join(preferences["allergies"])
+            api_preferences["custom_preferences"] += f" Allergies: {allergies}."
+            
+        # Add favorite cuisines to custom preferences
+        if preferences.get("favorite_cuisines"):
+            cuisines = ", ".join(preferences["favorite_cuisines"])
+            api_preferences["custom_preferences"] += f" Favorite cuisines: {cuisines}."
+            
+        # Append instruction for detailed steps to the user request
+        detailed_request = f"{user_request} Please provide detailed, step-by-step cooking instructions."
 
-        # Select model
-        if use_finetuned and self.finetuned_model:
-            model = self.finetuned_model
-            model_name = "Fine-tuned"
-        else:
-            model = self.base_model
-            model_name = "Base"
+        payload = {
+            "user_request": detailed_request,
+            "inventory": inventory, # Expected format: [{"name": "chicken", ...}, ...] - matches local
+            "preferences": api_preferences
+        }
 
-        print(f"🤖 Generating recipe with {model_name} model...")
-
-        # Tokenize
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(model.device)
-
-        # Generate
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=max_tokens,
-                temperature=temperature,
-                top_p=top_p,
-                do_sample=True,
-                pad_token_id=self.tokenizer.eos_token_id
-            )
-
-        # Decode
-        full_output = self.tokenizer.decode(outputs[0], skip_special_tokens=False)
-
-        # Extract only assistant's response (ChatML format)
-        if "<|im_start|>assistant" in full_output:
-            response = full_output.split("<|im_start|>assistant")[1]
-            if "<|im_end|>" in response:
-                response = response.split("<|im_end|>")[0].strip()
+        try:
+            response = requests.post(self.api_url, json=payload, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # The API returns structured JSON. We need to return it as a string 
+            # because the router expects a string (which it then tries to parse).
+            # To be safe and compatible with the router's new robust parsing logic,
+            # we can return it as a JSON string.
+            
+            # The API returns: {"recipe": {"status": "ok", "recipe": {...}}, "base_recipe": null}
+            # The frontend expects: {"status": "ok", "recipe": {...}} (which allows parsed.recipe to access the inner recipe)
+            # So we extract data["recipe"]
+            
+            if "recipe" in data:
+                return json.dumps(data["recipe"])
             else:
-                response = response.strip()
-            return response
-
-        return full_output
+                return json.dumps(data)
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ API Request failed: {e}")
+            return json.dumps({
+                "raw_text": f"Sorry, I couldn't generate a recipe at this time. Error: {str(e)}"
+            })
 
     def generate_comparison(
         self,
@@ -167,36 +102,25 @@ class ModelService:
         max_tokens: int = 512
     ) -> Dict[str, str]:
         """
-        Generate recipes with both base and fine-tuned models for comparison
-
-        Returns:
-            Dict with "base" and "finetuned" keys containing respective recipes
+        Generate recipes comparison (Mocked for external API)
         """
-        base_recipe = self.generate_recipe(
-            inventory, preferences, user_request,
-            use_finetuned=False, max_tokens=max_tokens
-        )
-
-        finetuned_recipe = self.generate_recipe(
-            inventory, preferences, user_request,
-            use_finetuned=True, max_tokens=max_tokens
-        )
-
+        # For now, just return the same recipe for both or handle as needed.
+        # Since the external API doesn't support comparison explicitly in the same way,
+        # we'll just generate one recipe.
+        
+        recipe = self.generate_recipe(inventory, preferences, user_request)
+        
         return {
-            "base": base_recipe,
-            "finetuned": finetuned_recipe
+            "base": recipe,
+            "finetuned": recipe
         }
 
     def cleanup(self):
-        """Free up GPU memory"""
-        del self.base_model
-        if self.finetuned_model:
-            del self.finetuned_model
-        torch.cuda.empty_cache()
-        print("✅ Models unloaded, memory freed")
+        """No-op for API service"""
+        pass
 
 
-# Global model instance (lazy loading)
+# Global model instance
 _model_service: Optional[ModelService] = None
 
 
@@ -205,9 +129,6 @@ def get_model_service() -> ModelService:
     global _model_service
 
     if _model_service is None:
-        BASE_MODEL = "meta-llama/Llama-3.2-3B-Instruct"
-        ADAPTER_PATH = "../generator"
-
-        _model_service = ModelService(BASE_MODEL, os.path.abspath("../model_weights/adapter"))
+        _model_service = ModelService()
 
     return _model_service

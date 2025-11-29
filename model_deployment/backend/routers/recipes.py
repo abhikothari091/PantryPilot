@@ -57,18 +57,74 @@ async def generate_recipe_endpoint(
         result = {"recipe": recipe_content}
 
     # Try to parse JSON to ensure it's valid before saving
+    # Try to parse JSON to ensure it's valid before saving
     try:
-        # This is a bit hacky, relying on the service to return a string that might contain JSON
-        # The service has some parsing logic but returns a string. 
-        # We should probably let the frontend parse it, but for history we want JSON.
-        # Let's try to extract JSON if it's a string.
+        # Improved JSON extraction logic
         import re
-        json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
-        if json_match:
-            recipe_json = json.loads(json_match.group(0))
+        
+        # 1. Try to find JSON inside markdown code blocks first
+        code_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', recipe_content, re.DOTALL)
+        if code_block_match:
+            recipe_json = json.loads(code_block_match.group(1))
         else:
-            recipe_json = {"raw_text": recipe_content}
-    except:
+            # 2. Fallback: Find the first valid JSON object in the text
+            start_index = recipe_content.find('{')
+            if start_index != -1:
+                # Try to find the matching closing brace by counting
+                balance = 0
+                end_index = -1
+                in_string = False
+                escape = False
+                
+                for i, char in enumerate(recipe_content[start_index:], start=start_index):
+                    if escape:
+                        escape = False
+                        continue
+                    
+                    if char == '\\':
+                        escape = True
+                        continue
+                    
+                    if char == '"':
+                        in_string = not in_string
+                        continue
+                    
+                    if not in_string:
+                        if char == '{':
+                            balance += 1
+                        elif char == '}':
+                            balance -= 1
+                            if balance == 0:
+                                end_index = i
+                                break
+                
+                if end_index != -1:
+                    try:
+                        recipe_json = json.loads(recipe_content[start_index:end_index+1])
+                    except json.JSONDecodeError:
+                        # Fallback to greedy if balanced fails (unlikely but safe)
+                        json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
+                        if json_match:
+                            try:
+                                recipe_json = json.loads(json_match.group(0))
+                            except:
+                                recipe_json = {"raw_text": recipe_content}
+                        else:
+                            recipe_json = {"raw_text": recipe_content}
+                else:
+                    # No balanced brace found, try greedy
+                    json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
+                    if json_match:
+                        try:
+                            recipe_json = json.loads(json_match.group(0))
+                        except:
+                            recipe_json = {"raw_text": recipe_content}
+                    else:
+                        recipe_json = {"raw_text": recipe_content}
+            else:
+                recipe_json = {"raw_text": recipe_content}
+    except Exception as e:
+        print(f"JSON parsing error: {e}")
         recipe_json = {"raw_text": recipe_content}
 
     # Save to history

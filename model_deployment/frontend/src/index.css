@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+
+  * {
+    @apply scroll-smooth;
+  }
+}
+
+@layer components {
+
+  /* Glass Effects */
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+
+  .glass-dark {
+    @apply bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+
+  /* Premium Buttons */
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-primary-500/25 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-primary-500/30 active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99];
+  }
+
+  .btn-accent {
+    @apply bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-accent-500/25 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-accent-500/30 active:scale-[0.98];
+  }
+
+  /* Input Fields */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 outline-none transition-all duration-200 bg-white placeholder:text-slate-400;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1;
+  }
+
+  .card-premium {
+    @apply bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-slate-200 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 hover:border-primary-200;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-700 hover:bg-primary-200;
+  }
+
+  .badge-success {
+    @apply badge bg-success-100 text-success-700;
+  }
+
+  .badge-accent {
+    @apply badge bg-accent-100 text-accent-700 hover:bg-accent-200;
+  }
+
+  /* Loading States */
+  .skeleton {
+    @apply animate-pulse bg-slate-200 rounded;
+  }
+
+  .shimmer {
+    @apply bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 bg-[length:1000px_100%] animate-shimmer;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 via-accent-600 to-primary-600 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-accent {
+    @apply bg-gradient-to-r from-accent-600 to-accent-400 bg-clip-text text-transparent;
+  }
+
+  .glow-primary {
+    @apply shadow-lg shadow-primary-500/50;
+  }
+
+  .glow-accent {
+    @apply shadow-lg shadow-accent-500/50;
+  }
+}

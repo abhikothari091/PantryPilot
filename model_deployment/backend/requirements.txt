@@ -11,3 +11,4 @@ python-dotenv==1.0.0
 # ML dependencies
 requests>=2.31.0
 google-genai>=0.4.0
+Pillow>=10.0.0

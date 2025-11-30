@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
-import google.generativeai as genai
 from PIL import Image
 from io import BytesIO
 import json

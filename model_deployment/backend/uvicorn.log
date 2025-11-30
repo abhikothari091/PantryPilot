@@ -174,3 +174,24 @@ INFO:     Finished server process [25034]
 INFO:     Started server process [28009]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+🚀 Initializing PantryPilot Backend...
+🔗 Initialized External Model Service: https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe
+✅ Model Service Ready
+INFO:     127.0.0.1:58585 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58586 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58586 - "GET /users/profile HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58585 - "GET /users/profile HTTP/1.1" 401 Unauthorized
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [28009]
+👋 Shutting down...
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:252: FutureWarning: You are using a Python version (3.9.6) past its end of life. Google will update google.api_core with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [49278]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

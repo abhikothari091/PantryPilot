@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 from contextlib import asynccontextmanager
 
 from database import engine
@@ -31,9 +32,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="PantryPilot API", lifespan=lifespan)
 
 # CORS
+frontend_origin = os.getenv("FRONTEND_ORIGIN")
+default_origins = ["http://localhost:5173", "http://localhost:3000"]
+allow_origins = [frontend_origin] + default_origins if frontend_origin else default_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"], # Vite default port
+    allow_origins=allow_origins, # Vite default ports + optional FRONTEND_ORIGIN
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

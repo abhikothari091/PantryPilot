@@ -278,16 +278,13 @@ airflow dags test pantrypilot_data_pipeline 2025-01-01
 ```
 PantryPilot/
 ├── data_pipeline/                      # Main data pipeline
-│   ├── airflow/
-│   │   └── dags/
-│   │       └── pantry_pilot_dag.py
+│   ├── airflow/dags/pantry_pilot_dag.py
 │   ├── data/
 │   │   ├── alerts/
 │   │   ├── processed/
 │   │   ├── raw/
 │   │   ├── receipts/
-│   │   ├── scripts/
-│   │   │   └── synthetic_generate.py
+│   │   ├── scripts/synthetic_generate.py
 │   │   └── synthetic_data/
 │   ├── great_expectations/
 │   ├── reports/
@@ -306,13 +303,39 @@ PantryPilot/
 │   ├── requirements.txt
 │   └── dvc.yaml
 │
-├── model_deployment/                  # Web App (Frontend + Backend)
-│   ├── backend/                       # FastAPI + Llama 3B
-│   ├── frontend/                      # React + Vite
-│   └── model_weights/                 # LoRA adapters
+├── model_deployment/                   # Web app (frontend + backend)
+│   ├── README.md                       # Detailed deployment guide
+│   ├── backend/
+│   │   ├── auth_utils.py
+│   │   ├── database.py
+│   │   ├── main.py
+│   │   ├── model_service.py
+│   │   ├── models.py
+│   │   ├── requirements.txt
+│   │   ├── routers/
+│   │   │   ├── auth.py
+│   │   │   ├── inventory.py
+│   │   │   ├── recipes.py
+│   │   │   └── users.py
+│   │   └── utils/smart_inventory.py
+│   ├── frontend/
+│   │   ├── public/logo.png             # Favicon/logo
+│   │   ├── index.html                  # Uses logo.png + title
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── api/axios.js
+│   │       ├── assets/
+│   │       ├── components/
+│   │       ├── context/
+│   │       ├── pages/                  # Dashboard, RecipeGenerator, Profile, History, Login, Signup
+│   │       ├── App.jsx
+│   │       ├── main.jsx
+│   │       ├── App.css
+│   │       └── index.css
+│   └── model_weights/                  # LoRA adapters (if used locally)
 │
-├── model_development/                  # Model dev & evaluation
-│   ├── training_pipeline/             # Recipe training data generation (teammate 2)
+├── model_development/                  # Model development & eval
+│   ├── training_pipeline/
 │   │   ├── 01_synthetic_generation/
 │   │   │   ├── generate_synthetic_recipes_groq.py
 │   │   │   ├── SCENARIOS.md
@@ -328,38 +351,18 @@ PantryPilot/
 │   │   │   ├── lambda_finetune_llama3b.ipynb
 │   │   │   ├── lora_config_v3.yaml
 │   │   │   └── LAMBDA_LABS_SETUP_GUIDE.md
-│   │   └── data/                      # Training data (from GCS)
-│   │       ├── synthetic/
-│   │       ├── chat_format/
-│   │       └── cleaned/
+│   │   └── data/ (synthetic/chat_format/cleaned)
 │   ├── llm_eval/
-│   │   ├── __init__.py
-│   │   ├── config.py
-│   │   ├── datasets.py
-│   │   ├── metrics.py
-│   │   ├── run_eval.py
-│   │   ├── bias_eval.py
-│   │   ├── analyze_results.py
-│   │   ├── data/
-│   │   │   ├── recipes_test.jsonl      # Synthetic eval set from teammate 2
-│   │   │   └── val_bias.json           # Hand-crafted bias prompts
-│   │   └── reports/
-│   │       ├── eval_*.json
-│   │       ├── eval_summary_*.csv
-│   │       └── bias_report.csv
-│   └── models/                         # NOT tracked by git (see .gitignore)
-│       └── llama3b_lambda_lora/        # LoRA adapter (local, from GCS)
-│   └── ocr/                            # New folder for OCR pipeline
-│       ├── scan_receipts.py
-│       ├── ocr_evaluation.ipynb
-│       └── test_receipts/              # Folder of receipt images for manual evaluation
+│   │   ├── config.py, datasets.py, metrics.py, run_eval.py, bias_eval.py, analyze_results.py
+│   │   ├── data/ (recipes_test.jsonl, val_bias.json)
+│   │   └── reports/ (eval_*.json, eval_summary_*.csv, bias_report.csv)
+│   ├── models/ (gitignored; LoRA adapters)
+│   └── ocr/ (scan_receipts.py, ocr_evaluation.ipynb, test_receipts/)
 │
 ├── DataCard/                           # Data & model documentation
-├── docs/                               # Global docs (slides, notes, etc.)
-├── .github/
-│   └── workflows/
-│       └── pantrypilot_ci.yml          # CI pipeline (tests + smoke eval)
-├── .dvc/                               # DVC configuration
+├── docs/                               # Slides/notes
+├── .github/workflows/pantrypilot_ci.yml# CI
+├── .dvc/                               # DVC config
 └── .gitignore                          # Includes model_development/models/
 ```
 
@@ -1031,5 +1034,6 @@ From a full MLOps perspective, this project demonstrates:
 - CI hooks to prevent obvious regressions in both pipeline and model evaluation code
 
 Overall, PantryPilot moves from synthetic inventory data → clean, validated tables → LLM-based recipe generation with measured behavior across multiple user segments. That matches the course goal: not just training a model, but integrating it into a reproducible, observable, and evaluable system.
+
 
 

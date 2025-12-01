@@ -5,18 +5,20 @@ Full-stack web application for PantryPilot, covering auth, profiles, inventory m
 ---
 
 ## System Architecture
+
 ```mermaid
 flowchart LR
-    User -->|browser| FE[Frontend (React/Vite, Tailwind)]
-    FE -->|REST + JWT| BE[Backend (FastAPI)]
-    BE -->|SQLAlchemy| DB[(Postgres / Neon)]
+    User -->|browser| FE["Frontend (React, Vite, Tailwind)"]
+    FE -->|REST + JWT| BE[Backend FastAPI]
+    BE -->|SQLAlchemy| DB[(Postgres Neon)]
     BE -->|Recipe API| LLM[External LLM Service]
     BE -->|OCR API| OCR[Receipt OCR Service]
-    BE -->|Optional video| VID[Video Gen (Veo)]
-    BE -->|Auth| JWT[JWT Signing (SECRET_KEY)]
+    BE -->|Optional video| VID[Video Gen Veo]
+    BE -->|Auth| JWT[JWT Signing SECRET_KEY]
 ```
 
 ### Request Lifecycle (happy path)
+
 1) User authenticates (register/login) → JWT issued and stored client-side.  
 2) Inventory/Profiles fetched via authenticated calls.  
 3) Recipe generate: frontend posts prompt → backend pulls inventory + profile → calls external model → saves JSON to history → returns recipe.  
@@ -25,6 +27,7 @@ flowchart LR
 6) Video (optional): frontend triggers `/recipes/video` → mock URL unless Veo enabled.
 
 ### Backend request flow (recipe generation)
+
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
@@ -42,6 +45,7 @@ sequenceDiagram
 ```
 
 ### Backend request flow (cooked deduction)
+
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
@@ -58,6 +62,7 @@ sequenceDiagram
 ---
 
 ## Components & Technologies
+
 - Frontend: React 19, Vite, Tailwind CSS, framer-motion, axios. Auth via JWT stored locally; API base set by `VITE_API_BASE_URL`. Animations for loading/UX polish.
 - Backend: FastAPI, SQLAlchemy, Postgres, passlib + jose (JWT), Pillow (image handling), requests. External calls: recipe model API (Cloud Run), OCR API, optional Veo video gen. CORS configurable via env.
 - Data: Postgres tables for users, profiles, inventory, recipe history.
@@ -65,6 +70,7 @@ sequenceDiagram
 ---
 
 ## Repository Layout (model_deployment/)
+
 ```
 model_deployment/
   backend/
@@ -92,6 +98,7 @@ model_deployment/
 ---
 
 ## Data Model (backend/models.py)
+
 - User: id, username, email, hashed_password, created_at
 - UserProfile: dietary_restrictions[], allergies[], favorite_cuisines[]
 - InventoryItem: item_name, quantity, unit, expiry_date?, category, user_id, created_at
@@ -100,6 +107,7 @@ model_deployment/
 ---
 
 ## API Surface (key routes)
+
 Auth
 - `POST /auth/register` → {access_token, token_type}
 - `POST /auth/token` → {access_token, token_type}
@@ -126,6 +134,7 @@ Recipes
 ---
 
 ## Smart Inventory Logic (utils/smart_inventory.py)
+
 - Parsing: regex to extract qty/unit/name (handles decimals and fractions, prefix and parenthetical patterns).
 - Unit normalization: maps plurals/variants to canonical units (lb/kg/g/oz, cup/tbsp/tsp/ml/l, pcs, can, bunch, head, clove).
 - Unit conversion: weight and volume conversions; fallback to count when incompatible units.
@@ -135,6 +144,7 @@ Recipes
 ---
 
 ## External Integrations
+
 - Recipe generation: external API at Cloud Run (see `model_service.py`) returning JSON; robust parsing on frontend/backend to handle raw text or JSON.
 - OCR: external OCR endpoint; response normalized, user confirms before insert.
 - Video (optional): `/recipes/video` returns mock URL unless `VIDEO_GEN_ENABLED=true` and `VIDEO_GEN_API_KEY` set; uses google-genai client when enabled.
@@ -142,6 +152,7 @@ Recipes
 ---
 
 ## Environment Variables
+
 Backend (required unless noted)
 - `DATABASE_URL` (Postgres/Neon) — required
 - `SECRET_KEY` — required (JWT signing)
@@ -156,7 +167,9 @@ Frontend
 ---
 
 ## Local Development
+
 Backend
+
 ```bash
 cd model_deployment/backend
 python -m venv .venv && source .venv/bin/activate
@@ -167,6 +180,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Frontend
+
 ```bash
 cd model_deployment/frontend
 npm install
@@ -184,6 +198,7 @@ Smoke checks (manual)
 ---
 
 ## Deployment (Render reference)
+
 Backend (Web Service)
 - Root: `model_deployment/backend`
 - Build: `pip install -r requirements.txt`
@@ -202,6 +217,7 @@ Branch selection: Render lets you pick a branch per service; set it in service s
 ---
 
 ## UX Walkthrough (frontend)
+
 - Login/Signup pages: JWT auth flow.
 - Dashboard: inventory grid with edit/delete, low-stock flags, OCR upload modal with confirm-and-edit flow.
 - RecipeGenerator: servings selector, prompt input, animated loading, warning banners for missing inventory, parsed steps, feedback buttons, cooked action (inventory deduction), optional video preview widget (minimal copy).
@@ -209,24 +225,26 @@ Branch selection: Render lets you pick a branch per service; set it in service s
 - Profile: update dietary restrictions, allergies, favorite cuisines (feeds backend preferences).
 
 ### UI Flow (high level)
+
 ```mermaid
 flowchart TD
-    L[Login/Signup] --> D[Dashboard]
-    D -->|Add/Edit/Delete| Inventory[Inventory CRUD]
-    D -->|Upload receipt| OCRFlow[OCR Modal -> Confirm Items -> Save]
+    L[Login or Signup] --> D[Dashboard]
+    D -->|Add Edit Delete| Inventory[Inventory CRUD]
+    D -->|Upload receipt| OCRFlow[OCR Modal Confirm Items Save]
     D --> R[Recipe Generator]
-    R -->|Generate| RecResp[Show Recipe + Warnings + Steps]
+    R -->|Generate| RecResp[Show Recipe Warnings Steps]
     RecResp -->|Feedback| FB[Save Feedback]
     RecResp -->|Cooked| Cooked[Deduct Inventory]
-    R -->|Video (optional)| Video[Mock/Live Video Preview]
-    D --> H[History View (filters)]
-    L --> P[Profile (diet/allergies/cuisines)]
+    R -->|Video optional| Video[Mock or Live Video Preview]
+    D --> H[History View filters]
+    L --> P[Profile diet allergies cuisines]
     P --> R
 ```
 
 ---
 
 ## Operational Notes & Troubleshooting
+
 - CORS: set `FRONTEND_ORIGIN` on backend; localhost ports (5173, 3000) always allowed.
 - Auth: JWT signed with SECRET_KEY; ensure strong value in prod.
 - DB: Do not use SQLite in prod; Postgres/Neon only. Ensure `DATABASE_URL` set before start.
@@ -237,6 +255,7 @@ flowchart TD
 ---
 
 ## Future Extensions (handoff hints)
+
 - Swap model_service to internal model (HF/PEFT) if running locally; keep signature.
 - Add rate limiting / request logging middleware.
 - Add migrations (Alembic) for schema evolution; currently relies on SQLAlchemy create_all.
@@ -245,4 +264,5 @@ flowchart TD
 ---
 
 ## License
+
 MIT (see repo root).

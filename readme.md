@@ -808,22 +808,14 @@ Request: Quick dinner using mostly my pantry.
 
 ## 🍳 PantryPilot Web Application
 
-We have developed a full-stack web application to serve the fine-tuned model to end users.
-
-**Location:** `model_deployment/`
-
-### Key Features
-- **Interactive Recipe Generator**: Chat interface with the Llama 3.2 3B model.
-- **Smart Inventory Management**: Automatically deducts ingredients from inventory when recipes are cooked.
-- **Servings Scaling**: Adjusts ingredient quantities based on selected servings (1-10).
-- **Premium UI**: React-based interface with engaging animations (Chef Hat 👨‍🍳, OCR scanning).
-
-### Architecture
-- **Frontend**: React, Vite, Tailwind CSS
-- **Backend**: FastAPI, SQLAlchemy, NeonDB
-- **Model**: Local inference of Llama 3.2 3B + LoRA adapters
-
-For detailed setup and usage instructions, please see the [Web App README](model_deployment/README.md).
+Full-stack deployment of PantryPilot (React/Vite frontend + FastAPI backend + Postgres/Neon). Deployed on Render as separate services (backend Web Service, frontend Static Site). Highlights:
+- Auth + profiles (JWT), inventory CRUD with OCR upload/confirmation, recipe generation via external model API, recipe history, “cooked” deduction with unit conversion, optional video generation (mock by default).
+- Configurable CORS via `FRONTEND_ORIGIN`; frontend targets backend via `VITE_API_BASE_URL`.
+- Environment vars: `DATABASE_URL`, `SECRET_KEY`, optional video toggles. See full list below.
+- Deploy steps (Render reference):
+  - Backend root `model_deployment/backend`: build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, set envs (`DATABASE_URL`, `SECRET_KEY`, `FRONTEND_ORIGIN`, `VIDEO_GEN_ENABLED=false`).
+  - Frontend root `model_deployment/frontend`: build `npm install && npm run build`, publish `dist`, env `VITE_API_BASE_URL=https://<backend>`.
+- Detailed documentation, flow diagrams, API list, and data model: see [model_deployment/README.md](model_deployment/README.md).
   - `diet_match_rate`: 1.0 if output respects the requested dietary preference, else 0.0
   - `constraint_violation_rate`: 1.0 if constraints are violated, else 0.0
   - `cuisine_match_rate`: 1.0 if recipe.cuisine matches requested cuisine (if any)

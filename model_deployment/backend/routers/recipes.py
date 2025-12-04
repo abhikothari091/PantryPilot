@@ -288,3 +288,43 @@ def generate_recipe_video(body: VideoGenerateRequest):
             mode = "mock"
 
     return {"status": "success", "video_url": video_url, "mode": mode}
+
+@router.post("/warmup")
+def warmup_llm_service(request: Request):
+    """
+    Lightweight warmup endpoint to trigger external LLM service cold start.
+    Called on user login to reduce latency for first recipe generation.
+    Returns immediately without waiting for full generation (fire-and-forget).
+    """
+    import threading
+    
+    model_service = request.app.state.model_service
+    
+    # Minimal payload to wake up the Cloud Run service
+    minimal_inventory = [{"name": "rice", "quantity": 1, "unit": "kg"}]
+    minimal_preferences = {
+        "dietary_restrictions": [],
+        "cooking_style": "balanced",
+        "custom_preferences": ""
+    }
+    
+    def warmup_task():
+        """Background task to trigger LLM service warmup"""
+        try:
+            # Fire a lightweight request with minimal tokens
+            model_service.generate_recipe(
+                inventory=minimal_inventory,
+                preferences=minimal_preferences,
+                user_request="warmup",
+                max_tokens=50,  # Very short response to minimize cost
+                temperature=0.7
+            )
+        except Exception as e:
+            # Silent fail - warmup is optional, don't disrupt login
+            print(f"🔥 Warmup request completed with exception (expected): {e}")
+    
+    # Start warmup in background thread - don't block response
+    thread = threading.Thread(target=warmup_task, daemon=True)
+    thread.start()
+    
+    return {"status": "warming", "message": "LLM service warmup initiated"}

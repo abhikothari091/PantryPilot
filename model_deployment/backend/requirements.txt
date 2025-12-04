@@ -8,6 +8,12 @@ python-multipart>=0.0.6
 pydantic==2.5.0
 python-dotenv==1.0.0
 
+# Testing dependencies
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+httpx>=0.24.1
+
 # ML dependencies
 requests>=2.31.0
 google-genai>=0.4.0

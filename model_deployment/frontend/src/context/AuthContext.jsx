@@ -38,6 +38,14 @@ export const AuthProvider = ({ children }) => {
         // Fetch profile immediately
         const profileRes = await api.get('/users/profile');
         setUser(profileRes.data);
+
+        // 🔥 Warmup: Fire-and-forget request to wake up LLM service
+        // This reduces cold start latency for first recipe generation
+        // Don't await - let it happen in background, silently ignore failures
+        api.post('/recipes/warmup').catch(() => {
+            // Silent ignore - warmup is optional, shouldn't break login
+        });
+
         return true;
     };
 

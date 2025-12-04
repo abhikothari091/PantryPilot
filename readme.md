@@ -2,6 +2,12 @@
 
 **Group 16 · Personalized Grocery Forecasting & Constraint-Aware Recipe Assistant**
 
+![Tests](https://github.com/abhikothari091/PantryPilot/workflows/Tests/badge.svg)
+[![codecov](https://codecov.io/gh/abhikothari091/PantryPilot/branch/main/graph/badge.svg)](https://codecov.io/gh/abhikothari091/PantryPilot)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![React](https://img.shields.io/badge/react-19.2-blue)
+![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen)
+
 ---
 
 ## 📘 High-Level Overview

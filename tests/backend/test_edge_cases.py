@@ -115,8 +115,11 @@ def test_update_inventory_missing_fields(client, auth_headers, test_inventory_it
         }
     )
     
-    # Should return validation error
-    assert response.status_code == 422
+    # Partial updates are accepted; quantity/unit/category remain unchanged
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["item"]["item_name"] == "Updated Item"
 
 @pytest.mark.api
 def test_add_inventory_duplicate_name(client, auth_headers, test_inventory_items):

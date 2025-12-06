@@ -65,7 +65,10 @@ class ModelService:
         payload = {
             "user_request": detailed_request,
             "inventory": inventory, # Expected format: [{"name": "chicken", ...}, ...] - matches local
-            "preferences": api_preferences
+            "preferences": api_preferences,
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_tokens": max_tokens
         }
 
         try:

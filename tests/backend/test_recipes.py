@@ -191,6 +191,47 @@ def test_submit_feedback_dislike(client, auth_headers, test_db, test_user):
     assert history.feedback_score == 1
 
 @pytest.mark.api
+def test_generate_recipe_comparison_on_seventh_request(client, auth_headers, test_db, test_user):
+    """Every 7th generation should return two variants for preference collection."""
+    mock_service = Mock()
+    mock_service.generate_recipe.side_effect = [
+        json.dumps({"recipe": {"name": "Variant A", "main_ingredients": []}}),
+        json.dumps({"recipe": {"name": "Variant B", "main_ingredients": []}})
+    ]
+    client.app.state.model_service = mock_service
+
+    from models import UserProfile, RecipePreference, RecipeHistory
+
+    profile = test_db.query(UserProfile).filter_by(user_id=test_user.id).first()
+    profile.recipe_generation_count = 6  # Pretend the user has already generated 6 recipes
+    test_db.commit()
+
+    response = client.post("/recipes/generate",
+        headers=auth_headers,
+        json={
+            "user_request": "DPO comparison request",
+            "servings": 2
+        }
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["mode"] == "comparison"
+    assert "variant_a" in data["data"]
+    assert "variant_b" in data["data"]
+    assert mock_service.generate_recipe.call_count == 2
+
+    # Generation count incremented to 7
+    test_db.refresh(profile)
+    assert profile.recipe_generation_count == 7
+
+    # Preference record stored and no history written yet
+    preference = test_db.query(RecipePreference).filter_by(user_id=test_user.id).first()
+    assert preference is not None
+    assert preference.prompt == "DPO comparison request"
+    assert test_db.query(RecipeHistory).count() == 0
+
+@pytest.mark.api
 def test_get_recipe_history(client, auth_headers, test_db, test_user):
     """Test retrieving recipe history."""
     from models import RecipeHistory

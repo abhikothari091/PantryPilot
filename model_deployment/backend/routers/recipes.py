@@ -8,7 +8,7 @@ import os
 import time
 
 from database import get_db
-from models import RecipeHistory, User, InventoryItem, UserProfile
+from models import RecipeHistory, User, InventoryItem, UserProfile, RecipePreference
 from routers.inventory import get_current_user
 from utils.smart_inventory import find_best_inventory_match, convert_unit, parse_ingredient, normalize_unit
 
@@ -27,6 +27,78 @@ router = APIRouter(
     prefix="/recipes",
     tags=["recipes"],
 )
+
+
+def _extract_recipe_json(recipe_content: str) -> dict:
+    """
+    Robustly parse model output into JSON.
+    Accepts plain strings or already-parsed dicts and falls back to raw text.
+    """
+    if isinstance(recipe_content, dict):
+        return recipe_content
+
+    try:
+        import re
+
+        # 1. Try to find JSON inside markdown code blocks first
+        code_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', recipe_content, re.DOTALL)
+        if code_block_match:
+            return json.loads(code_block_match.group(1))
+
+        # 2. Fallback: Find the first valid JSON object in the text
+        start_index = recipe_content.find('{')
+        if start_index != -1:
+            balance = 0
+            end_index = -1
+            in_string = False
+            escape = False
+
+            for i, char in enumerate(recipe_content[start_index:], start=start_index):
+                if escape:
+                    escape = False
+                    continue
+
+                if char == '\\':
+                    escape = True
+                    continue
+
+                if char == '"':
+                    in_string = not in_string
+                    continue
+
+                if not in_string:
+                    if char == '{':
+                        balance += 1
+                    elif char == '}':
+                        balance -= 1
+                        if balance == 0:
+                            end_index = i
+                            break
+
+            if end_index != -1:
+                try:
+                    return json.loads(recipe_content[start_index:end_index+1])
+                except json.JSONDecodeError:
+                    json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
+                    if json_match:
+                        try:
+                            return json.loads(json_match.group(0))
+                        except json.JSONDecodeError:
+                            return {"raw_text": recipe_content}
+                    return {"raw_text": recipe_content}
+
+            json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
+            if json_match:
+                try:
+                    return json.loads(json_match.group(0))
+                except json.JSONDecodeError:
+                    return {"raw_text": recipe_content}
+
+        return {"raw_text": recipe_content}
+
+    except Exception as e:
+        print(f"JSON parsing error: {e}")
+        return {"raw_text": recipe_content}
 
 # Video generation configuration
 VIDEO_GEN_ENABLED = os.getenv("VIDEO_GEN_ENABLED", "false").lower() == "true"
@@ -59,6 +131,12 @@ async def generate_recipe_endpoint(
     inventory_list = [{"name": item.item_name, "quantity": item.quantity, "unit": item.unit} for item in inventory_items]
     
     profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if not profile:
+        profile = UserProfile(user_id=current_user.id, recipe_generation_count=0)
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+
     preferences = {
         "dietary_restrictions": profile.dietary_restrictions if profile else [],
         "allergies": profile.allergies if profile else [],
@@ -66,88 +144,52 @@ async def generate_recipe_endpoint(
     }
 
     model_service = request.app.state.model_service
-    
-    if body.compare:
-        result = model_service.generate_comparison(inventory_list, preferences, body.user_request)
-        # We only save the finetuned one to history for now, or maybe both? 
-        # For simplicity, let's assume the user interacts with the finetuned one primarily.
-        recipe_content = result["finetuned"]
-    else:
-        recipe_content = model_service.generate_recipe(inventory_list, preferences, body.user_request, use_finetuned=True)
-        result = {"recipe": recipe_content}
 
-    # Try to parse JSON to ensure it's valid before saving
-    # Try to parse JSON to ensure it's valid before saving
-    try:
-        # Improved JSON extraction logic
-        import re
-        
-        # 1. Try to find JSON inside markdown code blocks first
-        code_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', recipe_content, re.DOTALL)
-        if code_block_match:
-            recipe_json = json.loads(code_block_match.group(1))
-        else:
-            # 2. Fallback: Find the first valid JSON object in the text
-            start_index = recipe_content.find('{')
-            if start_index != -1:
-                # Try to find the matching closing brace by counting
-                balance = 0
-                end_index = -1
-                in_string = False
-                escape = False
-                
-                for i, char in enumerate(recipe_content[start_index:], start=start_index):
-                    if escape:
-                        escape = False
-                        continue
-                    
-                    if char == '\\':
-                        escape = True
-                        continue
-                    
-                    if char == '"':
-                        in_string = not in_string
-                        continue
-                    
-                    if not in_string:
-                        if char == '{':
-                            balance += 1
-                        elif char == '}':
-                            balance -= 1
-                            if balance == 0:
-                                end_index = i
-                                break
-                
-                if end_index != -1:
-                    try:
-                        recipe_json = json.loads(recipe_content[start_index:end_index+1])
-                    except json.JSONDecodeError:
-                        # Fallback to greedy if balanced fails (unlikely but safe)
-                        json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
-                        if json_match:
-                            try:
-                                recipe_json = json.loads(json_match.group(0))
-                            except:
-                                recipe_json = {"raw_text": recipe_content}
-                        else:
-                            recipe_json = {"raw_text": recipe_content}
-                else:
-                    # No balanced brace found, try greedy
-                    json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
-                    if json_match:
-                        try:
-                            recipe_json = json.loads(json_match.group(0))
-                        except:
-                            recipe_json = {"raw_text": recipe_content}
-                    else:
-                        recipe_json = {"raw_text": recipe_content}
-            else:
-                recipe_json = {"raw_text": recipe_content}
-    except Exception as e:
-        print(f"JSON parsing error: {e}")
-        recipe_json = {"raw_text": recipe_content}
+    next_generation_count = (profile.recipe_generation_count or 0) + 1
+    is_comparison = body.compare or next_generation_count % 7 == 0
 
-    # Save to history
+    if is_comparison:
+        # Generate two variants using the same external API (fresh calls)
+        variant_a_raw = model_service.generate_recipe(
+            inventory_list, preferences, body.user_request, use_finetuned=True, temperature=0.7
+        )
+        variant_b_raw = model_service.generate_recipe(
+            inventory_list, preferences, body.user_request, use_finetuned=True, temperature=0.7
+        )
+
+        variant_a = _extract_recipe_json(variant_a_raw)
+        variant_b = _extract_recipe_json(variant_b_raw)
+
+        preference_entry = RecipePreference(
+            user_id=current_user.id,
+            prompt=body.user_request,
+            variant_a=variant_a,
+            variant_b=variant_b,
+            created_at=datetime.utcnow()
+        )
+
+        profile.recipe_generation_count = next_generation_count
+        db.add(preference_entry)
+        db.commit()
+        db.refresh(preference_entry)
+
+        return {
+            "status": "success",
+            "mode": "comparison",
+            "generation_count": next_generation_count,
+            "preference_id": preference_entry.id,
+            "data": {
+                "variant_a": variant_a,
+                "variant_b": variant_b
+            }
+        }
+
+    # Standard single recipe generation
+    recipe_content = model_service.generate_recipe(
+        inventory_list, preferences, body.user_request, use_finetuned=True
+    )
+    recipe_json = _extract_recipe_json(recipe_content)
+
     history_entry = RecipeHistory(
         user_id=current_user.id,
         recipe_json=recipe_json,
@@ -155,11 +197,18 @@ async def generate_recipe_endpoint(
         servings=body.servings,
         created_at=datetime.utcnow()
     )
+    profile.recipe_generation_count = next_generation_count
     db.add(history_entry)
     db.commit()
     db.refresh(history_entry)
 
-    return {"status": "success", "data": result, "history_id": history_entry.id}
+    return {
+        "status": "success",
+        "mode": "single",
+        "generation_count": next_generation_count,
+        "data": {"recipe": recipe_json},
+        "history_id": history_entry.id
+    }
 
 @router.post("/{history_id}/feedback")
 def submit_feedback(

@@ -52,6 +52,7 @@ def test_user_profile_relationship(test_db):
     # Access via relationship
     assert user.profile is not None
     assert user.profile.dietary_restrictions == ["vegan"]
+    assert user.profile.recipe_generation_count == 0
     assert profile.user.username == "reltest"
 
 @pytest.mark.unit

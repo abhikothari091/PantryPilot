@@ -232,6 +232,49 @@ def test_generate_recipe_comparison_on_seventh_request(client, auth_headers, tes
     assert test_db.query(RecipeHistory).count() == 0
 
 @pytest.mark.api
+def test_choose_preference_adds_history(client, auth_headers, test_db, test_user):
+    """Choosing a variant should write to history and mark preference."""
+    mock_service = Mock()
+    mock_service.generate_recipe.side_effect = [
+        json.dumps({"recipe": {"name": "Variant A"}}),
+        json.dumps({"recipe": {"name": "Variant B"}}),
+    ]
+    client.app.state.model_service = mock_service
+
+    from models import UserProfile, RecipePreference, RecipeHistory
+
+    profile = test_db.query(UserProfile).filter_by(user_id=test_user.id).first()
+    profile.recipe_generation_count = 6
+    test_db.commit()
+
+    # Trigger comparison
+    compare_res = client.post("/recipes/generate",
+        headers=auth_headers,
+        json={"user_request": "choose test", "servings": 2}
+    )
+    pref_id = compare_res.json()["preference_id"]
+
+    # Choose variant A
+    choose_res = client.post(f"/recipes/preference/{pref_id}/choose",
+        headers=auth_headers,
+        json={"chosen_variant": "A", "servings": 2}
+    )
+    assert choose_res.status_code == 200
+    data = choose_res.json()
+    assert data["history_id"] is not None
+
+    test_db.refresh(profile)
+    pref = test_db.query(RecipePreference).filter_by(id=pref_id).first()
+    assert pref.chosen_variant == "A"
+    assert pref.rejected_variant == "B"
+    assert pref.chosen_recipe_history_id == data["history_id"]
+
+    # History written
+    history = test_db.query(RecipeHistory).filter_by(id=data["history_id"]).first()
+    assert history is not None
+    assert history.recipe_json["recipe"]["name"] == "Variant A"
+
+@pytest.mark.api
 def test_get_recipe_history(client, auth_headers, test_db, test_user):
     """Test retrieving recipe history."""
     from models import RecipeHistory

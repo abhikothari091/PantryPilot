@@ -17,6 +17,13 @@ class GenerateRecipeRequest(BaseModel):
     servings: int = 2
     compare: bool = False
 
+class PreferenceChoiceRequest(BaseModel):
+    chosen_variant: str  # "A" or "B"
+    servings: int = 2
+
+class PreferenceSkipRequest(BaseModel):
+    reason: str | None = None
+
 class FeedbackRequest(BaseModel):
     score: int # 1=Dislike, 2=Like
 
@@ -100,6 +107,38 @@ def _extract_recipe_json(recipe_content: str) -> dict:
         print(f"JSON parsing error: {e}")
         return {"raw_text": recipe_content}
 
+
+def _sanitize_recipe(recipe_json: dict) -> dict:
+    """
+    Remove clearly unused/ignored ingredients from main_ingredients.
+    Acts in-place on the provided dict.
+    """
+    if not isinstance(recipe_json, dict):
+        return recipe_json
+
+    recipe_node = recipe_json.get("recipe", recipe_json)
+    ingredients = recipe_node.get("main_ingredients")
+    if isinstance(ingredients, list):
+        cleaned = []
+        for ing in ingredients:
+            text = ""
+            if isinstance(ing, str):
+                text = ing
+            elif isinstance(ing, dict):
+                text = ing.get("name") or ing.get("ingredient") or ""
+            else:
+                cleaned.append(ing)
+                continue
+
+            lowered = text.lower()
+            if "not used" in lowered or "ignore" in lowered:
+                continue
+            cleaned.append(ing)
+
+        recipe_node["main_ingredients"] = cleaned
+
+    return recipe_json
+
 # Video generation configuration
 VIDEO_GEN_ENABLED = os.getenv("VIDEO_GEN_ENABLED", "false").lower() == "true"
 VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1-generate-preview")
@@ -157,14 +196,19 @@ async def generate_recipe_endpoint(
             inventory_list, preferences, body.user_request, use_finetuned=True, temperature=0.7
         )
 
-        variant_a = _extract_recipe_json(variant_a_raw)
-        variant_b = _extract_recipe_json(variant_b_raw)
+        variant_a = _sanitize_recipe(_extract_recipe_json(variant_a_raw))
+        variant_b = _sanitize_recipe(_extract_recipe_json(variant_b_raw))
 
         preference_entry = RecipePreference(
             user_id=current_user.id,
             prompt=body.user_request,
+            user_query=body.user_request,
+            servings=body.servings,
+            generation_number=next_generation_count,
             variant_a=variant_a,
             variant_b=variant_b,
+            variant_a_raw=variant_a_raw if isinstance(variant_a_raw, str) else json.dumps(variant_a_raw),
+            variant_b_raw=variant_b_raw if isinstance(variant_b_raw, str) else json.dumps(variant_b_raw),
             created_at=datetime.utcnow()
         )
 
@@ -182,17 +226,18 @@ async def generate_recipe_endpoint(
                 "variant_a": variant_a,
                 "variant_b": variant_b
             }
-        }
+    }
 
     # Standard single recipe generation
     recipe_content = model_service.generate_recipe(
         inventory_list, preferences, body.user_request, use_finetuned=True
     )
-    recipe_json = _extract_recipe_json(recipe_content)
+    recipe_json = _sanitize_recipe(_extract_recipe_json(recipe_content))
 
     history_entry = RecipeHistory(
         user_id=current_user.id,
         recipe_json=recipe_json,
+        raw_response=recipe_content if isinstance(recipe_content, str) else json.dumps(recipe_content),
         user_query=body.user_request,
         servings=body.servings,
         created_at=datetime.utcnow()
@@ -209,6 +254,76 @@ async def generate_recipe_endpoint(
         "data": {"recipe": recipe_json},
         "history_id": history_entry.id
     }
+
+
+@router.post("/preference/{preference_id}/choose")
+def choose_preference(
+    preference_id: int,
+    body: PreferenceChoiceRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    choice = body.chosen_variant.upper()
+    if choice not in ("A", "B"):
+        raise HTTPException(status_code=400, detail="chosen_variant must be 'A' or 'B'")
+
+    pref = db.query(RecipePreference).filter(
+        RecipePreference.id == preference_id,
+        RecipePreference.user_id == current_user.id
+    ).first()
+    if not pref:
+        raise HTTPException(status_code=404, detail="Preference not found")
+
+    chosen_json = pref.variant_a if choice == "A" else pref.variant_b
+    rejected = "B" if choice == "A" else "A"
+
+    history_entry = RecipeHistory(
+        user_id=current_user.id,
+        recipe_json=chosen_json,
+        user_query=pref.prompt or pref.user_query or "",
+        servings=body.servings,
+        created_at=datetime.utcnow()
+    )
+    pref.chosen_variant = choice
+    pref.rejected_variant = rejected
+    pref.chosen_at = datetime.utcnow()
+    pref.updated_at = datetime.utcnow()
+    pref.chosen_recipe_history_id = None
+
+    db.add(history_entry)
+    db.commit()
+    db.refresh(history_entry)
+
+    pref.chosen_recipe_history_id = history_entry.id
+    db.commit()
+
+    return {
+        "status": "success",
+        "preference_id": preference_id,
+        "chosen_variant": choice,
+        "history_id": history_entry.id
+    }
+
+
+@router.post("/preference/{preference_id}/skip")
+def skip_preference(
+    preference_id: int,
+    body: PreferenceSkipRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    pref = db.query(RecipePreference).filter(
+        RecipePreference.id == preference_id,
+        RecipePreference.user_id == current_user.id
+    ).first()
+    if not pref:
+        raise HTTPException(status_code=404, detail="Preference not found")
+
+    pref.skipped = True
+    pref.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {"status": "success", "preference_id": preference_id, "skipped": True}
 
 @router.post("/{history_id}/feedback")
 def submit_feedback(

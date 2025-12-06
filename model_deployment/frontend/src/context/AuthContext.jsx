@@ -6,6 +6,15 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [warmupSent, setWarmupSent] = useState(false);
+
+    const triggerWarmup = () => {
+        if (warmupSent) return;
+        setWarmupSent(true);
+        api.post('/recipes/warmup').catch(() => {
+            // Silent ignore - warmup is optional, shouldn't break UX
+        });
+    };
 
     useEffect(() => {
         const checkLoggedIn = async () => {
@@ -15,6 +24,7 @@ export const AuthProvider = ({ children }) => {
                     // Verify token by fetching profile
                     const response = await api.get('/users/profile');
                     setUser(response.data);
+                    triggerWarmup();
                 } catch (error) {
                     localStorage.removeItem('token');
                     setUser(null);
@@ -41,10 +51,7 @@ export const AuthProvider = ({ children }) => {
 
         // 🔥 Warmup: Fire-and-forget request to wake up LLM service
         // This reduces cold start latency for first recipe generation
-        // Don't await - let it happen in background, silently ignore failures
-        api.post('/recipes/warmup').catch(() => {
-            // Silent ignore - warmup is optional, shouldn't break login
-        });
+        triggerWarmup();
 
         return true;
     };

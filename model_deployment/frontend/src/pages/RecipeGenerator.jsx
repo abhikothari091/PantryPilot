@@ -13,6 +13,13 @@ const RecipeGenerator = () => {
     const [feedback, setFeedback] = useState(null); // 1 or 2
     const [cooked, setCooked] = useState(false);
     const [error, setError] = useState('');
+    const [comparisonMode, setComparisonMode] = useState(false);
+    const [comparisonData, setComparisonData] = useState({ variantA: null, variantB: null });
+    const [preferenceId, setPreferenceId] = useState(null);
+    const [selectedVariant, setSelectedVariant] = useState(null); // "A" | "B"
+    const [choiceSubmitting, setChoiceSubmitting] = useState(false);
+    const [skipSubmitting, setSkipSubmitting] = useState(false);
+    const [comparisonError, setComparisonError] = useState('');
     const [inventory, setInventory] = useState([]);
     const [warning, setWarning] = useState('');
     const LOW_STOCK_THRESHOLD = 0.1; // treat near-zero as out of stock
@@ -184,6 +191,55 @@ const RecipeGenerator = () => {
         };
     };
 
+    const renderVariantCard = (variant, label) => {
+        if (!variant) return null;
+        const title = variant.recipe?.name || variant.name || `Variant ${label}`;
+        const cuisine = variant.recipe?.cuisine || variant.cuisine;
+        const time = variant.recipe?.time || variant.time;
+        const ingredients = variant.recipe?.main_ingredients || variant.main_ingredients || [];
+        const steps = variant.parsedSteps || [];
+
+        const isSelected = selectedVariant === label;
+
+        return (
+            <button
+                type="button"
+                onClick={() => setSelectedVariant(label)}
+                className={`flex-1 text-left bg-white border rounded-2xl p-5 shadow-sm transition-all ${
+                    isSelected ? 'border-primary-500 ring-4 ring-primary-100 scale-[1.01]' : 'border-slate-200 hover:border-primary-200'
+                }`}
+            >
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 rounded-full text-sm font-semibold bg-primary-50 text-primary-700 border border-primary-100">{label}</span>
+                        <h3 className="text-xl font-bold text-slate-900">{title}</h3>
+                    </div>
+                    {isSelected && <CheckCircle className="text-primary-600" size={20} />}
+                </div>
+                <div className="flex gap-2 flex-wrap mb-4">
+                    {cuisine && <span className="badge-accent">🍽️ {cuisine}</span>}
+                    {time && <span className="badge-primary">⏱️ {time}</span>}
+                </div>
+                <div className="space-y-3">
+                    <div>
+                        <h4 className="font-semibold text-slate-800 mb-2">Ingredients</h4>
+                        <ul className="space-y-1 text-slate-700 text-sm max-h-28 overflow-y-auto">
+                            {ingredients.map((ing, idx) => (
+                                <li key={idx}>• {typeof ing === 'string' ? ing : ing?.name || JSON.stringify(ing)}</li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-slate-800 mb-2">Instructions</h4>
+                        <ul className="space-y-1 text-slate-700 text-sm max-h-32 overflow-y-auto">
+                            {steps.length ? steps.map((s, i) => <li key={i}>• {s}</li>) : <li className="text-slate-400">Steps not provided</li>}
+                        </ul>
+                    </div>
+                </div>
+            </button>
+        );
+    };
+
     const normalizeName = (str = '') => str.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
 
     const hasInventoryItem = (name) => {
@@ -214,6 +270,11 @@ const RecipeGenerator = () => {
         setLoading(true);
         setError('');
         setRecipe(null);
+        setComparisonMode(false);
+        setComparisonData({ variantA: null, variantB: null });
+        setPreferenceId(null);
+        setSelectedVariant(null);
+        setComparisonError('');
         setFeedback(null);
         setCooked(false);
         setWarning('');
@@ -224,6 +285,16 @@ const RecipeGenerator = () => {
                 servings: servings
             });
             if (res.data.status === 'success') {
+                if (res.data.mode === 'comparison') {
+                    const variantA = parseRecipeResponse(res.data.data.variant_a);
+                    const variantB = parseRecipeResponse(res.data.data.variant_b);
+                    setComparisonData({ variantA, variantB });
+                    setPreferenceId(res.data.preference_id);
+                    setComparisonMode(true);
+                    setLoading(false);
+                    return;
+                }
+
                 const recipeData = parseRecipeResponse(res.data.data.recipe);
                 setRecipe(recipeData);
                 setHistoryId(res.data.history_id);
@@ -247,6 +318,47 @@ const RecipeGenerator = () => {
             setError('An error occurred. Please try again.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleConfirmChoice = async () => {
+        if (!preferenceId || !selectedVariant) return;
+        setChoiceSubmitting(true);
+        setComparisonError('');
+        try {
+            const res = await api.post(`/recipes/preference/${preferenceId}/choose`, {
+                chosen_variant: selectedVariant,
+                servings
+            });
+            const chosenData = selectedVariant === 'A' ? comparisonData.variantA : comparisonData.variantB;
+            setRecipe(chosenData);
+            setHistoryId(res.data.history_id);
+            setComparisonMode(false);
+            setSelectedVariant(null);
+            fetchInventory();
+        } catch (err) {
+            console.error('Choice failed', err);
+            setComparisonError('Failed to save your choice. Please try again.');
+        } finally {
+            setChoiceSubmitting(false);
+        }
+    };
+
+    const handleSkipComparison = async () => {
+        if (!preferenceId) return;
+        setSkipSubmitting(true);
+        setComparisonError('');
+        try {
+            await api.post(`/recipes/preference/${preferenceId}/skip`, { reason: 'user_skip' });
+            setComparisonMode(false);
+            setSelectedVariant(null);
+            setPreferenceId(null);
+            await handleGenerate(); // auto-regenerate a single recipe
+        } catch (err) {
+            console.error('Skip failed', err);
+            setComparisonError('Failed to skip. Please try again.');
+        } finally {
+            setSkipSubmitting(false);
         }
     };
 
@@ -410,6 +522,62 @@ const RecipeGenerator = () => {
                         >
                             <AlertCircle size={20} />
                             <span>{warning}</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Comparison Modal */}
+                <AnimatePresence>
+                    {comparisonMode && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-4"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.95, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.95, y: 20 }}
+                                className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full p-6 border border-slate-200"
+                            >
+                                <div className="flex items-start justify-between mb-4">
+                                    <div>
+                                        <p className="text-sm font-semibold text-primary-600 uppercase tracking-wide">Preference Check</p>
+                                        <h3 className="text-2xl font-bold text-slate-900">Which recipe do you prefer?</h3>
+                                        <p className="text-slate-500 mt-1">Select your favorite so we can personalize future recipes. Every 7th generation shows this comparison.</p>
+                                    </div>
+                                    <Sparkles className="text-primary-500" />
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {renderVariantCard(comparisonData.variantA, 'A')}
+                                    {renderVariantCard(comparisonData.variantB, 'B')}
+                                </div>
+
+                                {comparisonError && (
+                                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700">
+                                        {comparisonError}
+                                    </div>
+                                )}
+
+                                <div className="mt-6 flex flex-col md:flex-row justify-end gap-3">
+                                    <button
+                                        onClick={handleSkipComparison}
+                                        disabled={skipSubmitting || choiceSubmitting}
+                                        className="btn-secondary disabled:opacity-50"
+                                    >
+                                        {skipSubmitting ? 'Skipping...' : 'Skip & Generate New'}
+                                    </button>
+                                    <button
+                                        onClick={handleConfirmChoice}
+                                        disabled={!selectedVariant || choiceSubmitting || skipSubmitting}
+                                        className="btn-primary disabled:opacity-50"
+                                    >
+                                        {choiceSubmitting ? 'Saving choice...' : selectedVariant ? `Choose Variant ${selectedVariant}` : 'Select a variant'}
+                                    </button>
+                                </div>
+                            </motion.div>
                         </motion.div>
                     )}
                 </AnimatePresence>

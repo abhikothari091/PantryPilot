@@ -59,8 +59,12 @@ class ModelService:
             cuisines = ", ".join(preferences["favorite_cuisines"])
             api_preferences["custom_preferences"] += f" Favorite cuisines: {cuisines}."
             
-        # Append instruction for detailed steps to the user request
-        detailed_request = f"{user_request} Please provide detailed, step-by-step cooking instructions."
+        # Append instruction for detailed steps and strict ingredient usage
+        detailed_request = (
+            f"{user_request} Please provide detailed, step-by-step cooking instructions. "
+            "Use only ingredients you list in the recipe; do not include ingredients that are unused or marked as 'ignore'. "
+            "Keep the ingredient list tightly aligned to the actual steps."
+        )
 
         payload = {
             "user_request": detailed_request,

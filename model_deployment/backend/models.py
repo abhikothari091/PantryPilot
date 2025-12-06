@@ -51,6 +51,7 @@ class RecipeHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     recipe_json = Column(JSON) # The full generated recipe
+    raw_response = Column(String, nullable=True) # Raw LLM response text
     user_query = Column(String)
     servings = Column(Integer, default=2)
     feedback_score = Column(Integer, default=0) # 0=None, 1=Dislike, 2=Like
@@ -64,12 +65,21 @@ class RecipePreference(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    user_query = Column(String, nullable=True)
+    servings = Column(Integer, nullable=True)
+    generation_number = Column(Integer, nullable=True)
     prompt = Column(String, nullable=False)
     variant_a = Column(JSON, nullable=False)
     variant_b = Column(JSON, nullable=False)
+    variant_a_raw = Column(String, nullable=True)
+    variant_b_raw = Column(String, nullable=True)
     chosen_variant = Column(String, nullable=True) # "A" or "B"
     rejected_variant = Column(String, nullable=True)
+    chosen_recipe_history_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    chosen_at = Column(DateTime, nullable=True)
+    skipped = Column(Boolean, nullable=True)
+    exported_for_training = Column(Boolean, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="preferences")

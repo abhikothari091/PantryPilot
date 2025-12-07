@@ -2,10 +2,24 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from models import User, UserProfile
-from auth_utils import get_password_hash
+from auth_utils import get_password_hash, create_access_token
 
-def test_admin_metrics_access_denied_for_non_admin(client: TestClient, auth_headers):
-    response = client.get("/admin/metrics", headers=auth_headers)
+def test_admin_metrics_access_denied_for_non_admin(client: TestClient, test_db: Session):
+    # Create a unique non-admin user for this test
+    non_admin_user = User(
+        username="nonadmin_user",
+        email="nonadmin@example.com",
+        hashed_password=get_password_hash("password123")
+    )
+    test_db.add(non_admin_user)
+    test_db.commit()
+    test_db.refresh(non_admin_user)
+    
+    # Generate token
+    token = create_access_token(data={"sub": non_admin_user.username})
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    response = client.get("/admin/metrics", headers=headers)
     assert response.status_code == 403
     assert response.json()["detail"] == "Admin access required"
 

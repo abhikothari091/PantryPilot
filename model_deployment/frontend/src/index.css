@@ -3,98 +3,420 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+  html {
+    scroll-behavior: smooth;
   }
 
-  * {
-    @apply scroll-smooth;
+  body {
+    @apply bg-secondary-950 text-slate-100 antialiased font-sans;
+    background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+    min-height: 100vh;
+  }
+
+  /* Custom scrollbar for premium feel */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-secondary-900/50;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-secondary-700 rounded-full;
+    border: 2px solid transparent;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-secondary-600;
+  }
+
+  /* Selection styling */
+  ::selection {
+    @apply bg-primary-500/30 text-white;
   }
 }
 
 @layer components {
-
-  /* Glass Effects */
+  /* ============================================
+     GLASSMORPHISM PANELS
+     ============================================ */
+  
   .glass-panel {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  .glass-panel-solid {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%);
+    @apply backdrop-blur-xl border border-white/5 shadow-premium;
   }
 
   .glass-dark {
-    @apply bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(2, 6, 23, 0.95) 100%);
+    @apply backdrop-blur-xl border border-white/5 shadow-2xl;
   }
 
-  /* Premium Buttons */
+  .glass-frost {
+    background: rgba(255, 255, 255, 0.03);
+    @apply backdrop-blur-md border border-white/10;
+  }
+
+  /* ============================================
+     PREMIUM BUTTONS
+     ============================================ */
+  
   .btn-primary {
-    @apply bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-primary-500/25 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-primary-500/30 active:scale-[0.98];
+    @apply bg-gradient-to-r from-primary-600 to-primary-500 
+           hover:from-primary-500 hover:to-primary-400 
+           text-white font-semibold py-2.5 px-5 rounded-xl 
+           shadow-lg shadow-primary-500/20 
+           transition-all duration-300 
+           transform hover:scale-[1.02] hover:shadow-xl hover:shadow-primary-500/30 
+           active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
   }
 
   .btn-secondary {
-    @apply bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99];
+    @apply bg-secondary-800/80 hover:bg-secondary-700/80 
+           text-slate-200 font-medium py-2.5 px-5 rounded-xl 
+           border border-white/10 
+           shadow-sm hover:shadow-md hover:border-white/20
+           transition-all duration-300 
+           transform hover:scale-[1.01] active:scale-[0.99];
   }
 
-  .btn-accent {
-    @apply bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-accent-500/25 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-accent-500/30 active:scale-[0.98];
+  .btn-gold {
+    @apply bg-gradient-to-r from-gold-500 to-gold-400 
+           hover:from-gold-400 hover:to-gold-300 
+           text-secondary-900 font-semibold py-2.5 px-5 rounded-xl 
+           shadow-lg shadow-gold-500/25 
+           transition-all duration-300 
+           transform hover:scale-[1.02] hover:shadow-xl hover:shadow-gold-500/35 
+           active:scale-[0.98];
   }
 
-  /* Input Fields */
+  .btn-frost {
+    @apply bg-gradient-to-r from-frost-500 to-frost-400 
+           hover:from-frost-400 hover:to-frost-300 
+           text-white font-semibold py-2.5 px-5 rounded-xl 
+           shadow-lg shadow-frost-500/25 
+           transition-all duration-300 
+           transform hover:scale-[1.02] hover:shadow-xl hover:shadow-frost-500/35 
+           active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply bg-transparent hover:bg-white/5 
+           text-slate-300 hover:text-white font-medium py-2.5 px-5 rounded-xl 
+           border border-transparent hover:border-white/10
+           transition-all duration-300;
+  }
+
+  /* ============================================
+     INPUT FIELDS
+     ============================================ */
+  
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 outline-none transition-all duration-200 bg-white placeholder:text-slate-400;
+    @apply w-full px-4 py-3 rounded-xl 
+           bg-secondary-800/50 
+           border-2 border-secondary-700/50 
+           text-white placeholder:text-slate-500
+           focus:border-gold-500/50 focus:ring-4 focus:ring-gold-500/10 
+           outline-none transition-all duration-300;
   }
 
-  /* Cards */
+  .input-field-dark {
+    @apply w-full px-4 py-3.5 rounded-xl 
+           bg-secondary-900/80 
+           border border-white/10 
+           text-white placeholder:text-slate-500
+           focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 
+           focus:bg-secondary-900
+           outline-none transition-all duration-300;
+  }
+
+  /* ============================================
+     CARDS
+     ============================================ */
+  
   .card {
-    @apply bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1;
+    @apply bg-secondary-800/50 rounded-2xl border border-white/5 
+           shadow-lg hover:shadow-xl 
+           transition-all duration-300 
+           transform hover:-translate-y-1 hover:border-white/10;
   }
 
   .card-premium {
-    @apply bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-slate-200 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 hover:border-primary-200;
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+    @apply rounded-2xl border border-white/5 
+           shadow-xl hover:shadow-2xl 
+           transition-all duration-300 
+           transform hover:-translate-y-1 hover:border-primary-500/20;
   }
 
-  /* Badges */
+  .card-interactive {
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+    @apply rounded-2xl border border-white/5 
+           shadow-lg 
+           transition-all duration-300 
+           cursor-pointer
+           hover:border-gold-500/30 hover:shadow-glow-gold;
+  }
+
+  /* ============================================
+     BADGES
+     ============================================ */
+  
   .badge {
     @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200;
   }
 
   .badge-primary {
-    @apply badge bg-primary-100 text-primary-700 hover:bg-primary-200;
+    @apply badge bg-primary-500/20 text-primary-300 border border-primary-500/20;
+  }
+
+  .badge-gold {
+    @apply badge bg-gold-500/20 text-gold-300 border border-gold-500/20;
+  }
+
+  .badge-frost {
+    @apply badge bg-frost-500/20 text-frost-300 border border-frost-500/20;
   }
 
   .badge-success {
-    @apply badge bg-success-100 text-success-700;
+    @apply badge bg-evergreen-500/20 text-evergreen-300 border border-evergreen-500/20;
   }
 
   .badge-accent {
-    @apply badge bg-accent-100 text-accent-700 hover:bg-accent-200;
+    @apply badge bg-gold-500/15 text-gold-400 border border-gold-500/20;
   }
 
-  /* Loading States */
+  /* ============================================
+     LOADING STATES
+     ============================================ */
+  
   .skeleton {
-    @apply animate-pulse bg-slate-200 rounded;
+    @apply animate-pulse bg-secondary-700/50 rounded;
   }
 
   .shimmer {
-    @apply bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 bg-[length:1000px_100%] animate-shimmer;
+    @apply bg-gradient-to-r from-secondary-800 via-secondary-700 to-secondary-800 
+           bg-[length:1000px_100%] animate-shimmer;
+  }
+
+  /* ============================================
+     NAVIGATION
+     ============================================ */
+
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl 
+           text-slate-400 
+           transition-all duration-200
+           hover:bg-white/5 hover:text-white;
+  }
+
+  .nav-item-active {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl 
+           bg-primary-500/10 text-primary-400 font-medium 
+           border border-primary-500/20
+           shadow-sm shadow-primary-500/10;
+  }
+
+  /* ============================================
+     MODALS
+     ============================================ */
+
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm 
+           flex items-center justify-center z-50 p-4;
+  }
+
+  .modal-content {
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 100%);
+    @apply rounded-2xl border border-white/10 
+           shadow-2xl max-w-lg w-full;
+  }
+
+  .modal-header {
+    @apply p-6 border-b border-white/5;
+  }
+
+  .modal-body {
+    @apply p-6;
+  }
+
+  .modal-footer {
+    @apply p-6 border-t border-white/5 flex justify-end gap-3;
   }
 }
 
 @layer utilities {
+  /* ============================================
+     GRADIENT TEXT
+     ============================================ */
+  
   .text-gradient {
-    @apply bg-gradient-to-r from-primary-600 via-accent-600 to-primary-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary-400 via-gold-400 to-primary-400 
+           bg-clip-text text-transparent;
+  }
+
+  .text-gradient-christmas {
+    @apply bg-gradient-to-r from-primary-500 via-gold-400 to-evergreen-400 
+           bg-clip-text text-transparent;
+  }
+
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-gold-400 to-gold-200 
+           bg-clip-text text-transparent;
+  }
+
+  .text-gradient-frost {
+    @apply bg-gradient-to-r from-frost-400 to-frost-200 
+           bg-clip-text text-transparent;
   }
 
   .text-gradient-primary {
-    @apply bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary-400 to-primary-300 
+           bg-clip-text text-transparent;
   }
 
-  .text-gradient-accent {
-    @apply bg-gradient-to-r from-accent-600 to-accent-400 bg-clip-text text-transparent;
-  }
-
+  /* ============================================
+     GLOW EFFECTS
+     ============================================ */
+  
   .glow-primary {
-    @apply shadow-lg shadow-primary-500/50;
+    @apply shadow-lg shadow-primary-500/30;
   }
 
-  .glow-accent {
-    @apply shadow-lg shadow-accent-500/50;
+  .glow-gold {
+    @apply shadow-lg shadow-gold-500/30;
+  }
+
+  .glow-frost {
+    @apply shadow-lg shadow-frost-500/30;
+  }
+
+  /* ============================================
+     BORDERS
+     ============================================ */
+
+  .border-glow {
+    @apply border border-white/10;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .border-glow-primary {
+    @apply border border-primary-500/30;
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.15);
+  }
+
+  .border-glow-gold {
+    @apply border border-gold-500/30;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+  }
+
+  /* ============================================
+     BACKGROUNDS
+     ============================================ */
+
+  .bg-pattern-dots {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .bg-aurora {
+    background: 
+      radial-gradient(ellipse at 20% 20%, rgba(220, 38, 38, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(245, 158, 11, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 40% 60%, rgba(14, 165, 233, 0.08) 0%, transparent 50%);
+  }
+
+  /* ============================================
+     ANIMATIONS UTILITIES
+     ============================================ */
+
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-300 hover:scale-[1.02];
+  }
+
+  .hover-glow {
+    @apply transition-shadow duration-300;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.2);
+  }
+
+  /* ============================================
+     SCROLLBAR HIDDEN
+     ============================================ */
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ============================================
+     FOCUS STATES
+     ============================================ */
+
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:ring-offset-2 focus:ring-offset-secondary-900;
+  }
+
+  .focus-ring-gold {
+    @apply focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:ring-offset-2 focus:ring-offset-secondary-900;
+  }
+}
+
+/* ============================================
+   SNOWFALL ANIMATION (CSS-only, performant)
+   ============================================ */
+
+.snowflake {
+  position: fixed;
+  top: -10px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  pointer-events: none;
+  z-index: 1;
+  animation: snowfall 10s linear infinite;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+.snowflake:nth-child(1) { left: 5%; animation-delay: 0s; animation-duration: 12s; opacity: 0.4; }
+.snowflake:nth-child(2) { left: 15%; animation-delay: 2s; animation-duration: 14s; opacity: 0.3; }
+.snowflake:nth-child(3) { left: 25%; animation-delay: 4s; animation-duration: 10s; opacity: 0.5; }
+.snowflake:nth-child(4) { left: 35%; animation-delay: 1s; animation-duration: 16s; opacity: 0.3; }
+.snowflake:nth-child(5) { left: 45%; animation-delay: 3s; animation-duration: 11s; opacity: 0.4; }
+.snowflake:nth-child(6) { left: 55%; animation-delay: 5s; animation-duration: 13s; opacity: 0.3; }
+.snowflake:nth-child(7) { left: 65%; animation-delay: 0.5s; animation-duration: 15s; opacity: 0.4; }
+.snowflake:nth-child(8) { left: 75%; animation-delay: 2.5s; animation-duration: 12s; opacity: 0.3; }
+.snowflake:nth-child(9) { left: 85%; animation-delay: 4.5s; animation-duration: 14s; opacity: 0.5; }
+.snowflake:nth-child(10) { left: 95%; animation-delay: 1.5s; animation-duration: 10s; opacity: 0.3; }
+
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
   }
 }

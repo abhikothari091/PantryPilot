@@ -22,7 +22,7 @@ class PreferenceChoiceRequest(BaseModel):
     servings: int = 2
 
 class PreferenceSkipRequest(BaseModel):
-    reason: str | None = None
+    reason: Optional[str] = None
 
 class FeedbackRequest(BaseModel):
     score: int # 1=Dislike, 2=Like
@@ -143,16 +143,17 @@ def _sanitize_recipe(recipe_json: dict) -> dict:
 VIDEO_GEN_ENABLED = os.getenv("VIDEO_GEN_ENABLED", "false").lower() == "true"
 VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1-generate-preview")
 VIDEO_GEN_API_KEY = os.getenv("VIDEO_GEN_API_KEY")
-VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "120"))
-VIDEO_GEN_POLL_SECONDS = int(os.getenv("VIDEO_GEN_POLL_SECONDS", "5"))
+VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "180"))  # Increased for production
+VIDEO_GEN_POLL_SECONDS = int(os.getenv("VIDEO_GEN_POLL_SECONDS", "10"))  # Match official docs
 VIDEO_FALLBACK_URL = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
+# Import Google GenAI following official documentation pattern
+genai = None
 try:
-    import google.genai as genai
-    from google.genai import types as genai_types
-except Exception:
-    genai = None
-    genai_types = None
+    from google import genai as google_genai
+    genai = google_genai
+except ImportError:
+    pass
 
 @router.post("/generate")
 async def generate_recipe_endpoint(
@@ -410,9 +411,12 @@ def get_recipe_history(db: Session = Depends(get_db), current_user: User = Depen
 @router.post("/video")
 def generate_recipe_video(body: VideoGenerateRequest):
     """
-    Generate a recipe video. Defaults to a mock URL; when VIDEO_GEN_ENABLED is true and the
-    Google GenAI client plus API key are present, attempts a live generation. Falls back to
-    mock on errors to avoid breaking UX.
+    Generate a recipe video using Google Veo 3.1 API.
+    
+    When VIDEO_GEN_ENABLED is true and API key is configured, attempts live generation.
+    Falls back to mock video URL on errors to maintain stable UX.
+    
+    Reference: https://ai.google.dev/gemini-api/docs/video
     """
     prompt = body.prompt.strip()
     if not prompt:
@@ -423,31 +427,56 @@ def generate_recipe_video(body: VideoGenerateRequest):
 
     if VIDEO_GEN_ENABLED and genai and VIDEO_GEN_API_KEY:
         try:
+            print(f"🎬 Starting video generation with model: {VIDEO_GEN_MODEL}")
+            print(f"📝 Prompt: {prompt[:100]}...")
+            
+            # Initialize client following official documentation
             client = genai.Client(api_key=VIDEO_GEN_API_KEY)
+            
+            # Start video generation (async operation)
             operation = client.models.generate_videos(
                 model=VIDEO_GEN_MODEL,
                 prompt=prompt,
             )
+            print(f"📊 Operation started: {operation.name if hasattr(operation, 'name') else 'unknown'}")
 
+            # Poll until video is ready (following official docs pattern)
             start_time = time.time()
+            poll_count = 0
             while not operation.done:
-                if time.time() - start_time > VIDEO_GEN_TIMEOUT:
+                elapsed = time.time() - start_time
+                if elapsed > VIDEO_GEN_TIMEOUT:
+                    print(f"⏰ Video generation timed out after {elapsed:.0f}s")
                     raise HTTPException(status_code=504, detail="Video generation timed out")
-                time.sleep(max(1, VIDEO_GEN_POLL_SECONDS))
+                
+                poll_count += 1
+                print(f"⏳ Waiting for video... (poll #{poll_count}, {elapsed:.0f}s elapsed)")
+                time.sleep(VIDEO_GEN_POLL_SECONDS)
+                
+                # Refresh operation status (per official docs)
                 operation = client.operations.get(operation)
 
-            generated_video = operation.response.generated_videos[0]
-            # Prefer streaming URI if available
-            if hasattr(generated_video.video, "uri"):
-                video_url = generated_video.video.uri
+            # Extract video URL from completed operation
+            if operation.response and operation.response.generated_videos:
+                generated_video = operation.response.generated_videos[0]
+                
+                # Try multiple ways to get the video URL
+                if hasattr(generated_video, 'video'):
+                    if hasattr(generated_video.video, 'uri'):
+                        video_url = generated_video.video.uri
+                    elif hasattr(generated_video.video, 'url'):
+                        video_url = generated_video.video.url
+                
+                mode = "live"
+                print(f"✅ Video generated successfully: {video_url[:50]}...")
             else:
-                video_url = VIDEO_FALLBACK_URL
-            mode = "live"
+                print("⚠️ No video in response, using fallback")
+                
         except HTTPException:
             raise
         except Exception as e:
             # Silent fallback keeps the front end stable
-            print(f"Video generation failed, falling back to mock: {e}")
+            print(f"❌ Video generation failed: {type(e).__name__}: {e}")
             video_url = VIDEO_FALLBACK_URL
             mode = "mock"
 

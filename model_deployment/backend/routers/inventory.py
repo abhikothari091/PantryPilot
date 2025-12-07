@@ -18,6 +18,90 @@ router = APIRouter(
     tags=["inventory"],
 )
 
+# Smart category detection based on common grocery item keywords
+def detect_category(item_name: str) -> str:
+    """Intelligently categorize grocery items based on keywords."""
+    import re
+    name = item_name.lower().strip()
+    
+    def has_word(keywords):
+        """Check if any keyword exists as a whole word in name."""
+        for kw in keywords:
+            # Use word boundary matching to avoid partial matches (e.g., 'ice' in 'rice')
+            if re.search(r'\b' + re.escape(kw) + r'\b', name):
+                return True
+            # Also check if keyword is at start/end (for compound words)
+            if name.startswith(kw + ' ') or name.endswith(' ' + kw) or name == kw:
+                return True
+        return False
+    
+    # Produce - fruits and vegetables
+    produce_keywords = [
+        'apple', 'banana', 'orange', 'lemon', 'lime', 'grape', 'berry', 'strawberry',
+        'blueberry', 'raspberry', 'mango', 'pineapple', 'watermelon', 'melon', 'peach',
+        'pear', 'plum', 'cherry', 'kiwi', 'avocado', 'tomato', 'potato', 'onion',
+        'garlic', 'ginger', 'carrot', 'celery', 'broccoli', 'cauliflower', 'spinach',
+        'lettuce', 'cabbage', 'kale', 'cucumber', 'pepper', 'zucchini', 'squash',
+        'eggplant', 'corn', 'bean', 'pea', 'mushroom', 'asparagus', 'artichoke',
+        'beet', 'radish', 'turnip', 'parsley', 'cilantro', 'basil', 'mint', 'herb',
+        'salad', 'greens', 'vegetable', 'fruit', 'produce', 'fresh'
+    ]
+    
+    # Dairy products
+    dairy_keywords = [
+        'milk', 'cream', 'cheese', 'butter', 'yogurt', 'yoghurt', 'cottage', 'ricotta',
+        'mozzarella', 'cheddar', 'parmesan', 'feta', 'brie', 'gouda', 'swiss',
+        'sour cream', 'half and half', 'creamer', 'whipping', 'ice cream', 'gelato',
+        'egg', 'eggs', 'dairy'
+    ]
+    
+    # Meat and proteins
+    meat_keywords = [
+        'chicken', 'beef', 'pork', 'lamb', 'turkey', 'duck', 'bacon', 'sausage',
+        'ham', 'steak', 'ground beef', 'ground turkey', 'meat', 'poultry',
+        'fish', 'salmon', 'tuna', 'shrimp', 'prawn', 'lobster', 'crab', 'seafood',
+        'tilapia', 'cod', 'halibut', 'trout', 'oyster', 'mussel', 'clam', 'scallop',
+        'ribs', 'roast', 'chop', 'filet', 'tenderloin', 'wing', 'thigh', 'breast',
+        'deli', 'cold cut', 'salami', 'pepperoni', 'prosciutto'
+    ]
+    
+    # Frozen foods - only if explicitly marked frozen
+    frozen_keywords = [
+        'frozen', 'freezer', 'frost', 'tv dinner', 'popsicle'
+    ]
+    
+    # Beverages
+    beverage_keywords = [
+        'water', 'juice', 'soda', 'cola', 'sprite', 'coke', 'pepsi', 'coffee',
+        'tea', 'beer', 'wine', 'alcohol', 'drink', 'beverage', 'smoothie',
+        'lemonade', 'iced tea', 'energy drink', 'gatorade', 'sparkling', 'mineral'
+    ]
+    
+    # Check frozen first (only explicit frozen items)
+    if has_word(frozen_keywords):
+        return 'frozen'
+    
+    # Check ice cream specifically for dairy
+    if 'ice cream' in name:
+        return 'dairy'
+    
+    # Check beverages before other categories (juice, etc.)
+    if has_word(beverage_keywords):
+        return 'beverages'
+    
+    if has_word(dairy_keywords):
+        return 'dairy'
+    
+    if has_word(meat_keywords):
+        return 'meat'
+    
+    if has_word(produce_keywords):
+        return 'produce'
+    
+    # Default to pantry for dry goods, canned items, etc.
+    return 'pantry'
+
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -46,12 +130,15 @@ def get_inventory(db: Session = Depends(get_db), current_user: User = Depends(ge
 @router.post("/")
 def add_inventory_item(item: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # item dict expected: {"item_name": str, "quantity": float, "unit": str, "category": str}
+    item_name = item["item_name"]
+    category = item.get("category") or detect_category(item_name)  # Smart fallback
+    
     new_item = InventoryItem(
         user_id=current_user.id,
-        item_name=item["item_name"],
+        item_name=item_name,
         quantity=item["quantity"],
         unit=item["unit"],
-        category=item.get("category", "pantry")
+        category=category
     )
     db.add(new_item)
     db.commit()
@@ -152,7 +239,7 @@ async def upload_receipt(file: UploadFile = File(...), current_user: User = Depe
                     "item_name": item_name,
                     "quantity": qty,
                     "unit": unit if unit else "pcs",
-                    "category": "pantry"  # Default
+                    "category": detect_category(item_name)  # Smart category detection
                 })
             
             return {"status": "success", "detected_items": detected_items}

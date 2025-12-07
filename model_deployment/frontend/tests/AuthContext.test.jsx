@@ -175,19 +175,25 @@ describe('AuthContext', () => {
 
     describe('token persistence', () => {
         it('should restore user from stored token on mount', async () => {
+            // Reset all mocks first to clear the beforeEach reject mock
+            vi.clearAllMocks();
+
             localStorage.setItem('token', 'stored_token');
 
-            api.get.mockResolvedValueOnce({
+            // Mock profile fetch - this should be called when checking stored token
+            api.get.mockResolvedValue({
                 data: {
                     username: 'storeduser',
                     email: 'stored@example.com',
                 },
             });
+            // Mock warmup (fire-and-forget, may be called)
+            api.post.mockResolvedValue({ data: { status: 'warming' } });
 
             const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
             const { result } = renderHook(() => useAuth(), { wrapper });
 
-            await waitFor(() => expect(result.current.loading).toBe(false));
+            await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 3000 });
 
             expect(result.current.user).toEqual({
                 username: 'storeduser',

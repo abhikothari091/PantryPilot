@@ -2,7 +2,7 @@ name: Deploy to Cloud Run GPU
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "test-llm-deployment"]
 
 jobs:
   deploy:

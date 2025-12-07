@@ -205,8 +205,8 @@ const Profile = () => {
                             type="text"
                             className="input-field-dark"
                             placeholder="e.g., Peanuts, Shellfish, Tree nuts"
-                            value={profile.allergies.join(', ')}
-                            onChange={(e) => setProfile({
+                            defaultValue={profile.allergies.join(', ')}
+                            onBlur={(e) => setProfile({
                                 ...profile,
                                 allergies: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
                             })}

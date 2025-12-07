@@ -24,7 +24,7 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t us-central1-docker.pkg.dev/ultimate-bit-478920-i7/pantrypilot/pantrypilot-llm:latest .
+        docker build -t us-central1-docker.pkg.dev/ultimate-bit-478920-i7/pantrypilot/pantrypilot-llm:latest -f model_development/backend/Dockerfile .
 
     - name: Push Docker image
       run: |

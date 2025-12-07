@@ -160,13 +160,14 @@ const Dashboard = () => {
                     <p className="text-slate-400">Manage your ingredients and stock</p>
                 </div>
                 <div className="flex gap-3 w-full md:w-auto">
-                    <label className="btn-secondary flex items-center gap-2 cursor-pointer flex-1 md:flex-none justify-center">
+                    <label id="btn-scan-receipt" className="btn-secondary flex items-center gap-2 cursor-pointer flex-1 md:flex-none justify-center">
                         {uploading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
                         <span className="hidden sm:inline">Scan Receipt</span>
                         <span className="sm:hidden">Scan</span>
                         <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
                     </label>
                     <button
+                        id="btn-add-item"
                         onClick={() => setShowAddModal(true)}
                         className="btn-primary flex items-center gap-2 flex-1 md:flex-none justify-center"
                     >

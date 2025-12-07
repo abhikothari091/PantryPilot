@@ -315,14 +315,15 @@ PantryPilot/
 │   │   ├── auth_utils.py
 │   │   ├── database.py
 │   │   ├── main.py
-│   │   ├── model_service.py
-│   │   ├── models.py
+│   │   ├── model_service.py            # External LLM API client (strict dietary enforcement)
+│   │   ├── models.py                   # User, UserProfile, InventoryItem, RecipeHistory, RecipePreference
 │   │   ├── requirements.txt
 │   │   ├── routers/
 │   │   │   ├── auth.py
 │   │   │   ├── inventory.py
-│   │   │   ├── recipes.py
-│   │   │   └── users.py
+│   │   │   ├── recipes.py              # Recipe gen, DPO comparison, feedback, history
+│   │   │   ├── users.py
+│   │   │   └── admin.py                # Admin dashboard metrics
 │   │   └── utils/smart_inventory.py
 │   ├── frontend/
 │   │   ├── public/logo.png             # Favicon/logo
@@ -332,8 +333,13 @@ PantryPilot/
 │   │       ├── api/axios.js
 │   │       ├── assets/
 │   │       ├── components/
+│   │       │   ├── Layout.jsx          # Main layout with sidebar
+│   │       │   ├── AppTour.jsx         # Interactive onboarding tour (react-joyride)
+│   │       │   ├── AppTour.css         # Tour styling (glassmorphism)
+│   │       │   ├── Toast.jsx           # Toast notifications
+│   │       │   └── Skeleton.jsx        # Loading skeletons
 │   │       ├── context/
-│   │       ├── pages/                  # Dashboard, RecipeGenerator, Profile, History, Login, Signup
+│   │       ├── pages/                  # Dashboard, RecipeGenerator, Profile, History, Login, Signup, AdminDashboard
 │   │       ├── App.jsx
 │   │       ├── main.jsx
 │   │       ├── App.css
@@ -812,19 +818,6 @@ Request: Quick dinner using mostly my pantry.
   - Returns `(parsed_json, is_valid_json)`
 - **`compute_example_metrics(example, parsed, valid)`** computes:
   - `json_valid_rate`: 1.0 if valid JSON, else 0.0
-
----
-
-## 🍳 PantryPilot Web Application
-
-Full-stack deployment of PantryPilot (React/Vite frontend + FastAPI backend + Postgres/Neon). Deployed on Render as separate services (backend Web Service, frontend Static Site). Highlights:
-- Auth + profiles (JWT), inventory CRUD with OCR upload/confirmation, recipe generation via external model API, recipe history, “cooked” deduction with unit conversion, optional video generation (mock by default).
-- Configurable CORS via `FRONTEND_ORIGIN`; frontend targets backend via `VITE_API_BASE_URL`.
-- Environment vars: `DATABASE_URL`, `SECRET_KEY`, optional video toggles. See full list below.
-- Deploy steps (Render reference):
-  - Backend root `model_deployment/backend`: build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, set envs (`DATABASE_URL`, `SECRET_KEY`, `FRONTEND_ORIGIN`, `VIDEO_GEN_ENABLED=false`).
-  - Frontend root `model_deployment/frontend`: build `npm install && npm run build`, publish `dist`, env `VITE_API_BASE_URL=https://<backend>`.
-- Detailed documentation, flow diagrams, API list, and data model: see [model_deployment/README.md](model_deployment/README.md).
   - `diet_match_rate`: 1.0 if output respects the requested dietary preference, else 0.0
   - `constraint_violation_rate`: 1.0 if constraints are violated, else 0.0
   - `cuisine_match_rate`: 1.0 if recipe.cuisine matches requested cuisine (if any)
@@ -975,6 +968,24 @@ python -m model_development.llm_eval.analyze_results
 ```
 
 This is mainly used to copy tables / summaries into the final report and slides.
+
+---
+
+## 🍳 PantryPilot Web Application
+
+Full-stack deployment of PantryPilot (React/Vite frontend + FastAPI backend + Postgres/Neon). Deployed on Render as separate services (backend Web Service, frontend Static Site). Highlights:
+
+- **Auth + profiles (JWT)**, inventory CRUD with OCR upload/confirmation, recipe generation via external model API, recipe history, "cooked" deduction with unit conversion, optional video generation (mock by default).
+- **Admin Dashboard**: View application metrics (user count, recipe stats, inventory analytics, feedback distribution). Admin-only access.
+- **Interactive Onboarding Tour**: Built with react-joyride. Users can click "Start Tour" in the sidebar to get a guided walkthrough of app features (Dashboard, Recipes, History, Profile).
+- **DPO Comparison Flow**: Every 7th recipe generation shows two variants side-by-side. Users choose A or B, collecting preference data for future model fine-tuning.
+- **Strict Dietary Restrictions**: Backend enforces dietary preferences (vegetarian, vegan, gluten-free, etc.) with explicit prompts to the LLM. Allergies are marked as "life-threatening" to ensure compliance.
+- Configurable CORS via `FRONTEND_ORIGIN`; frontend targets backend via `VITE_API_BASE_URL`.
+- Environment vars: `DATABASE_URL`, `SECRET_KEY`, optional video toggles.
+- Deploy steps (Render reference):
+  - Backend root `model_deployment/backend`: build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, set envs (`DATABASE_URL`, `SECRET_KEY`, `FRONTEND_ORIGIN`, `VIDEO_GEN_ENABLED=false`).
+  - Frontend root `model_deployment/frontend`: build `npm install && npm run build`, publish `dist`, env `VITE_API_BASE_URL=https://<backend>`.
+- Detailed documentation, flow diagrams, API list, and data model: see [model_deployment/README.md](model_deployment/README.md).
 
 ---
 

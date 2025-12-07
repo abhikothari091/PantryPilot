@@ -496,6 +496,7 @@ const RecipeGenerator = () => {
                             </label>
                             <div className="flex gap-3">
                                 <input
+                                    id="input-recipe-query"
                                     type="text"
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
@@ -504,6 +505,7 @@ const RecipeGenerator = () => {
                                     className="input-field-dark flex-1"
                                 />
                                 <motion.button
+                                    id="btn-generate-recipe"
                                     onClick={handleGenerate}
                                     disabled={loading || !query.trim()}
                                     whileHover={{ scale: 1.02 }}

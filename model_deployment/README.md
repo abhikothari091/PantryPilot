@@ -63,9 +63,9 @@ sequenceDiagram
 
 ## Components & Technologies
 
-- Frontend: React 19, Vite, Tailwind CSS, framer-motion, axios. Auth via JWT stored locally; API base set by `VITE_API_BASE_URL`. Animations for loading/UX polish.
-- Backend: FastAPI, SQLAlchemy, Postgres, passlib + jose (JWT), Pillow (image handling), requests. External calls: recipe model API (Cloud Run), OCR API, optional Veo video gen. CORS configurable via env.
-- Data: Postgres tables for users, profiles, inventory, recipe history.
+- Frontend: React 19, Vite, Tailwind CSS, framer-motion, axios, **react-joyride** (interactive tour). Auth via JWT stored locally; API base set by `VITE_API_BASE_URL`. Animations for loading/UX polish.
+- Backend: FastAPI, SQLAlchemy, Postgres, passlib + jose (JWT), Pillow (image handling), requests. External calls: recipe model API (Cloud Run), OCR API, optional Veo video gen. CORS configurable via env. **Strict dietary restriction enforcement** in prompts.
+- Data: Postgres tables for users, profiles, inventory, recipe history, **recipe preferences (DPO comparisons)**.
 
 ---
 
@@ -75,22 +75,25 @@ sequenceDiagram
 model_deployment/
   backend/
     main.py                 # FastAPI app, CORS, startup/shutdown
-    routers/                # auth, users, inventory, recipes
+    routers/                # auth, users, inventory, recipes, admin
       auth.py               # register/login (JWT)
       users.py              # profile CRUD
       inventory.py          # inventory CRUD + OCR upload/confirm
-      recipes.py            # recipe gen, cooked, feedback, history, video (mock/live)
-    model_service.py        # external recipe API client (LLM)
+      recipes.py            # recipe gen, cooked, feedback, history, video, DPO comparison
+      admin.py              # admin dashboard metrics (users, recipes, inventory stats)
+    model_service.py        # external recipe API client (LLM) with strict dietary enforcement
     utils/smart_inventory.py# ingredient parsing, normalization, unit conversion, fuzzy match
-    models.py               # SQLAlchemy models (User, UserProfile, InventoryItem, RecipeHistory)
+    models.py               # SQLAlchemy models (User, UserProfile, InventoryItem, RecipeHistory, RecipePreference)
     database.py             # SessionLocal engine
     requirements.txt
     .env.example            # suggested env layout (not committed with secrets)
   frontend/
     public/logo.png         # favicon/logo
     src/api/axios.js        # axios instance, baseURL from VITE_API_BASE_URL
-    src/pages/              # Dashboard, RecipeGenerator, Profile, History, Login, Signup
-    src/components/         # Layout, shared UI
+    src/pages/              # Dashboard, RecipeGenerator, Profile, History, Login, Signup, AdminDashboard
+    src/components/         # Layout, AppTour, Toast, Skeleton, shared UI
+      AppTour.jsx           # Interactive onboarding tour (react-joyride)
+      AppTour.css           # Tour styling (glassmorphism theme)
     index.html              # head, favicon, title
     package.json
 ```
@@ -100,9 +103,10 @@ model_deployment/
 ## Data Model (backend/models.py)
 
 - User: id, username, email, hashed_password, created_at
-- UserProfile: dietary_restrictions[], allergies[], favorite_cuisines[]
+- UserProfile: dietary_restrictions[], allergies[], favorite_cuisines[], recipe_generation_count
 - InventoryItem: item_name, quantity, unit, expiry_date?, category, user_id, created_at
 - RecipeHistory: recipe_json (generated), user_query, servings, feedback_score, is_cooked, created_at, user_id
+- **RecipePreference**: variant_a, variant_b, chosen_variant, rejected_variant, skipped, prompt, generation_number (DPO comparison data)
 
 ---
 
@@ -125,11 +129,22 @@ Inventory
 - `POST /inventory/confirm_upload` → bulk insert confirmed OCR items
 
 Recipes
-- `POST /recipes/generate` → calls external recipe API (LLM), saves history, returns recipe payload
+- `POST /recipes/generate` → calls external recipe API (LLM) with **strict dietary restrictions**, saves history, returns recipe payload. Every 7th generation triggers DPO comparison mode.
 - `POST /recipes/{id}/cooked` → deducts inventory using smart_inventory parsing/conversion
 - `POST /recipes/{id}/feedback` → save feedback score
 - `GET /recipes/history` → newest-first recipe history
 - `POST /recipes/video` → mock video URL by default; when `VIDEO_GEN_ENABLED` and Veo key present, attempts live video gen
+- `POST /recipes/warmup` → lightweight endpoint to warm up external LLM service (called on login)
+
+DPO Comparison (Direct Preference Optimization)
+- `POST /recipes/preference/{id}/choose` → user selects variant A or B, saves to history
+- `POST /recipes/preference/{id}/skip` → user skips comparison
+
+Admin (requires admin user)
+- `GET /admin/metrics` → user count, recipe count, inventory stats, feedback distribution
+- `GET /admin/users` → list all users with profile data
+- `GET /admin/recipes` → list all recipes with user info
+- `POST /admin/seed` → create admin user (one-time setup)
 
 ---
 
@@ -220,9 +235,11 @@ Branch selection: Render lets you pick a branch per service; set it in service s
 
 - Login/Signup pages: JWT auth flow.
 - Dashboard: inventory grid with edit/delete, low-stock flags, OCR upload modal with confirm-and-edit flow.
-- RecipeGenerator: servings selector, prompt input, animated loading, warning banners for missing inventory, parsed steps, feedback buttons, cooked action (inventory deduction), optional video preview widget (minimal copy).
+- RecipeGenerator: servings selector, prompt input, animated loading, warning banners for missing inventory, parsed steps, feedback buttons, cooked action (inventory deduction), optional video preview widget. **DPO comparison modal** appears every 7th generation.
 - History: filter by liked/disliked/neutral, shows user query, timestamps, cooked badge, feedback status.
-- Profile: update dietary restrictions, allergies, favorite cuisines (feeds backend preferences).
+- Profile: update dietary restrictions (enforced strictly in recipe generation), allergies (comma-separated input), favorite cuisines.
+- **Admin Dashboard**: (admin user only) view metrics, user stats, recipe analytics, feedback distribution.
+- **Interactive Tour**: Click "Start Tour" in sidebar to get a guided walkthrough of the app's features (powered by react-joyride).
 
 ### UI Flow (high level)
 
@@ -233,12 +250,16 @@ flowchart TD
     D -->|Upload receipt| OCRFlow[OCR Modal Confirm Items Save]
     D --> R[Recipe Generator]
     R -->|Generate| RecResp[Show Recipe Warnings Steps]
+    R -->|Every 7th| DPO[DPO Comparison Modal]
+    DPO -->|Choose A or B| RecResp
     RecResp -->|Feedback| FB[Save Feedback]
     RecResp -->|Cooked| Cooked[Deduct Inventory]
     R -->|Video optional| Video[Mock or Live Video Preview]
     D --> H[History View filters]
     L --> P[Profile diet allergies cuisines]
     P --> R
+    D -->|Admin only| Admin[Admin Dashboard Metrics]
+    D -->|Start Tour| Tour[Interactive Onboarding Tour]
 ```
 
 ---
@@ -260,6 +281,9 @@ flowchart TD
 - Add rate limiting / request logging middleware.
 - Add migrations (Alembic) for schema evolution; currently relies on SQLAlchemy create_all.
 - Promote video to first-class (progress polling endpoint, status persistence) if needed.
+- Extend DPO data export for model fine-tuning pipeline.
+- Add multi-page tour steps if cross-page navigation becomes reliable in react-joyride.
+- Consider tour completion persistence (localStorage) to avoid re-showing to returning users.
 
 ---
 

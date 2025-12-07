@@ -43,25 +43,51 @@ class ModelService:
         # Local preferences: {"dietary_restrictions": [...], "allergies": [...], "favorite_cuisines": [...]}
         # API preferences: {"dietary_restrictions": [], "cooking_style": "balanced", "custom_preferences": ""}
         
+        dietary = preferences.get("dietary_restrictions", [])
+        allergies = preferences.get("allergies", [])
+        cuisines = preferences.get("favorite_cuisines", [])
+        
         api_preferences = {
-            "dietary_restrictions": preferences.get("dietary_restrictions", []),
-            "cooking_style": "balanced", # Default
+            "dietary_restrictions": dietary,
+            "cooking_style": "balanced",
             "custom_preferences": ""
         }
         
-        # Add allergies to custom preferences if present
-        if preferences.get("allergies"):
-            allergies = ", ".join(preferences["allergies"])
-            api_preferences["custom_preferences"] += f" Allergies: {allergies}."
+        # Build STRICT dietary restrictions message
+        strict_restrictions = []
+        
+        if dietary:
+            dietary_str = ", ".join(dietary)
+            strict_restrictions.append(f"CRITICAL DIETARY RESTRICTIONS: {dietary_str}")
             
-        # Add favorite cuisines to custom preferences
-        if preferences.get("favorite_cuisines"):
-            cuisines = ", ".join(preferences["favorite_cuisines"])
-            api_preferences["custom_preferences"] += f" Favorite cuisines: {cuisines}."
+            # Add explicit forbidden ingredients for common restrictions
+            if any(d.lower() in ["vegetarian", "vegan"] for d in dietary):
+                strict_restrictions.append("ABSOLUTELY NO meat, poultry, fish, or seafood (no chicken, beef, pork, lamb, turkey, salmon, shrimp, etc.)")
+            if any(d.lower() == "vegan" for d in dietary):
+                strict_restrictions.append("ABSOLUTELY NO animal products (no eggs, dairy, milk, cheese, butter, cream, honey)")
+            if any("gluten" in d.lower() for d in dietary):
+                strict_restrictions.append("ABSOLUTELY NO gluten (no wheat, barley, rye, regular pasta, bread, flour)")
+        
+        if allergies:
+            allergies_str = ", ".join(allergies)
+            strict_restrictions.append(f"SEVERE ALLERGIES - LIFE THREATENING: {allergies_str}")
+            strict_restrictions.append(f"NEVER use these allergens: {allergies_str}")
+            
+        # Add favorite cuisines as a preference (not restriction)
+        if cuisines:
+            api_preferences["custom_preferences"] += f" Preferred cuisines: {', '.join(cuisines)}."
+            
+        # Build the final request with strict instructions
+        restriction_text = ""
+        if strict_restrictions:
+            restriction_text = "\n\n⚠️ MANDATORY RESTRICTIONS (MUST FOLLOW - NO EXCEPTIONS):\n" + "\n".join(f"• {r}" for r in strict_restrictions) + "\n\nDo NOT suggest any recipe that violates these restrictions. This is non-negotiable.\n\n"
+            api_preferences["custom_preferences"] = restriction_text + api_preferences["custom_preferences"]
             
         # Append instruction for detailed steps and strict ingredient usage
         detailed_request = (
-            f"{user_request} Please provide detailed, step-by-step cooking instructions. "
+            f"{user_request}"
+            f"{restriction_text}"
+            f"Please provide detailed, step-by-step cooking instructions. "
             "Use only ingredients you list in the recipe; do not include ingredients that are unused or marked as 'ignore'. "
             "Keep the ingredient list tightly aligned to the actual steps."
         )

@@ -25,6 +25,10 @@ const Layout = ({ children }) => {
         { path: '/profile', icon: User, label: 'Profile', emoji: '⚙️' },
     ];
 
+    if (user?.username === 'admin') {
+        navItems.push({ path: '/admin', icon: Sparkles, label: 'Admin', emoji: '👑' });
+    }
+
     return (
         <div className="min-h-screen bg-secondary-950 flex relative overflow-hidden">
             {/* Subtle Background Effects */}

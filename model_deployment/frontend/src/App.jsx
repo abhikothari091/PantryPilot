@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import RecipeGenerator from './pages/RecipeGenerator';
 import Profile from './pages/Profile';
 import History from './pages/History';
+import AdminDashboard from './pages/AdminDashboard';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -74,6 +75,14 @@ const AnimatedRoutes = () => {
           <PrivateRoute>
             <PageTransition>
               <History />
+            </PageTransition>
+          </PrivateRoute>
+        } />
+
+        <Route path="/admin" element={
+          <PrivateRoute>
+            <PageTransition>
+              <AdminDashboard />
             </PageTransition>
           </PrivateRoute>
         } />

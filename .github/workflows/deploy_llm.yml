@@ -24,6 +24,7 @@ jobs:
 
     - name: Download LoRA adapter from GCS
       run: |
+        gcloud auth list
         mkdir -p model_development/models
         gcloud storage cp -r gs://recipegen-llm-models/llama3b_lambda_lora ./model_development/models/ --no-user-output-enabled
 

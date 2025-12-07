@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, ChefHat, User, LogOut, ShoppingBasket, Clock, Sparkles } from 'lucide-react';
+import { LayoutDashboard, ChefHat, User, LogOut, ShoppingBasket, Clock, Sparkles, HelpCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Snowfall from './Snowfall';
 import { useToast } from './Toast';
+import AppTour from './AppTour';
 
 const Layout = ({ children }) => {
     const toast = useToast();
     const { logout, user } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const [tourEnabled, setTourEnabled] = useState(false);
 
     const handleLogout = () => {
         logout();
@@ -18,11 +20,19 @@ const Layout = ({ children }) => {
         navigate('/login');
     };
 
+    const toggleTour = () => {
+        setTourEnabled(true);
+    };
+
+    const handleTourExit = () => {
+        setTourEnabled(false);
+    };
+
     const navItems = [
-        { path: '/dashboard', icon: LayoutDashboard, label: 'Inventory', emoji: '🎄' },
-        { path: '/recipes', icon: ChefHat, label: 'Recipes', emoji: '👨‍🍳' },
-        { path: '/history', icon: Clock, label: 'History', emoji: '📜' },
-        { path: '/profile', icon: User, label: 'Profile', emoji: '⚙️' },
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Inventory', emoji: '🎄', id: 'nav-dashboard' },
+        { path: '/recipes', icon: ChefHat, label: 'Recipes', emoji: '👨‍🍳', id: 'nav-recipes' },
+        { path: '/history', icon: Clock, label: 'History', emoji: '📜', id: 'nav-history' },
+        { path: '/profile', icon: User, label: 'Profile', emoji: '⚙️', id: 'nav-profile' },
     ];
 
     if (user?.username === 'admin') {
@@ -31,6 +41,8 @@ const Layout = ({ children }) => {
 
     return (
         <div className="min-h-screen bg-secondary-950 flex relative overflow-hidden">
+            <AppTour enabled={tourEnabled} onExit={handleTourExit} />
+
             {/* Subtle Background Effects */}
             <div className="fixed inset-0 bg-aurora pointer-events-none" />
             <Snowfall enabled={true} density="light" />
@@ -66,6 +78,7 @@ const Layout = ({ children }) => {
                         return (
                             <motion.div
                                 key={item.path}
+                                id={item.id}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.05 }}
@@ -99,8 +112,19 @@ const Layout = ({ children }) => {
                     })}
                 </nav>
 
+                {/* Tour Button - Above user section */}
+                <div className="mx-4 mb-2">
+                    <button
+                        onClick={toggleTour}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-xl transition-all duration-200 group border border-dashed border-cyan-500/30 hover:border-cyan-500/50"
+                    >
+                        <HelpCircle size={16} />
+                        <span>Start Tour</span>
+                    </button>
+                </div>
+
                 {/* User Section */}
-                <div className="p-4 border-t border-white/5">
+                <div className="p-4 border-t border-white/5" id="user-section">
                     <div className="flex items-center gap-3 px-4 py-3 mb-2 rounded-xl bg-secondary-800/30">
                         <div className="relative">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center text-secondary-900 font-bold text-sm shadow-lg shadow-gold-500/20">

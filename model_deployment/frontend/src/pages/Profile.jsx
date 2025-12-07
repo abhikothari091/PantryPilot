@@ -119,7 +119,7 @@ const Profile = () => {
                     className="space-y-8"
                 >
                     {/* Dietary Restrictions */}
-                    <div className="card-premium p-6">
+                    <div id="section-dietary" className="card-premium p-6">
                         <div className="flex items-center gap-3 mb-5">
                             <div className="w-10 h-10 rounded-xl bg-evergreen-500/20 flex items-center justify-center">
                                 <Heart size={20} className="text-evergreen-400" />

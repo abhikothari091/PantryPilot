@@ -8,7 +8,7 @@ import os
 import time
 
 from database import get_db
-from models import RecipeHistory, User, InventoryItem, UserProfile
+from models import RecipeHistory, User, InventoryItem, UserProfile, RecipePreference
 from routers.inventory import get_current_user
 from utils.smart_inventory import find_best_inventory_match, convert_unit, parse_ingredient, normalize_unit
 
@@ -16,6 +16,13 @@ class GenerateRecipeRequest(BaseModel):
     user_request: str
     servings: int = 2
     compare: bool = False
+
+class PreferenceChoiceRequest(BaseModel):
+    chosen_variant: str  # "A" or "B"
+    servings: int = 2
+
+class PreferenceSkipRequest(BaseModel):
+    reason: Optional[str] = None
 
 class FeedbackRequest(BaseModel):
     score: int # 1=Dislike, 2=Like
@@ -28,20 +35,125 @@ router = APIRouter(
     tags=["recipes"],
 )
 
+
+def _extract_recipe_json(recipe_content: str) -> dict:
+    """
+    Robustly parse model output into JSON.
+    Accepts plain strings or already-parsed dicts and falls back to raw text.
+    """
+    if isinstance(recipe_content, dict):
+        return recipe_content
+
+    try:
+        import re
+
+        # 1. Try to find JSON inside markdown code blocks first
+        code_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', recipe_content, re.DOTALL)
+        if code_block_match:
+            return json.loads(code_block_match.group(1))
+
+        # 2. Fallback: Find the first valid JSON object in the text
+        start_index = recipe_content.find('{')
+        if start_index != -1:
+            balance = 0
+            end_index = -1
+            in_string = False
+            escape = False
+
+            for i, char in enumerate(recipe_content[start_index:], start=start_index):
+                if escape:
+                    escape = False
+                    continue
+
+                if char == '\\':
+                    escape = True
+                    continue
+
+                if char == '"':
+                    in_string = not in_string
+                    continue
+
+                if not in_string:
+                    if char == '{':
+                        balance += 1
+                    elif char == '}':
+                        balance -= 1
+                        if balance == 0:
+                            end_index = i
+                            break
+
+            if end_index != -1:
+                try:
+                    return json.loads(recipe_content[start_index:end_index+1])
+                except json.JSONDecodeError:
+                    json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
+                    if json_match:
+                        try:
+                            return json.loads(json_match.group(0))
+                        except json.JSONDecodeError:
+                            return {"raw_text": recipe_content}
+                    return {"raw_text": recipe_content}
+
+            json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
+            if json_match:
+                try:
+                    return json.loads(json_match.group(0))
+                except json.JSONDecodeError:
+                    return {"raw_text": recipe_content}
+
+        return {"raw_text": recipe_content}
+
+    except Exception as e:
+        print(f"JSON parsing error: {e}")
+        return {"raw_text": recipe_content}
+
+
+def _sanitize_recipe(recipe_json: dict) -> dict:
+    """
+    Remove clearly unused/ignored ingredients from main_ingredients.
+    Acts in-place on the provided dict.
+    """
+    if not isinstance(recipe_json, dict):
+        return recipe_json
+
+    recipe_node = recipe_json.get("recipe", recipe_json)
+    ingredients = recipe_node.get("main_ingredients")
+    if isinstance(ingredients, list):
+        cleaned = []
+        for ing in ingredients:
+            text = ""
+            if isinstance(ing, str):
+                text = ing
+            elif isinstance(ing, dict):
+                text = ing.get("name") or ing.get("ingredient") or ""
+            else:
+                cleaned.append(ing)
+                continue
+
+            lowered = text.lower()
+            if "not used" in lowered or "ignore" in lowered:
+                continue
+            cleaned.append(ing)
+
+        recipe_node["main_ingredients"] = cleaned
+
+    return recipe_json
+
 # Video generation configuration
 VIDEO_GEN_ENABLED = os.getenv("VIDEO_GEN_ENABLED", "false").lower() == "true"
 VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1-generate-preview")
 VIDEO_GEN_API_KEY = os.getenv("VIDEO_GEN_API_KEY")
-VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "120"))
-VIDEO_GEN_POLL_SECONDS = int(os.getenv("VIDEO_GEN_POLL_SECONDS", "5"))
+VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "180"))  # Increased for production
+VIDEO_GEN_POLL_SECONDS = int(os.getenv("VIDEO_GEN_POLL_SECONDS", "10"))  # Match official docs
 VIDEO_FALLBACK_URL = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
+# Import Google GenAI following official documentation pattern
+genai = None
 try:
-    import google.genai as genai
-    from google.genai import types as genai_types
-except Exception:
-    genai = None
-    genai_types = None
+    from google import genai as google_genai
+    genai = google_genai
+except ImportError:
+    pass
 
 @router.post("/generate")
 async def generate_recipe_endpoint(
@@ -59,6 +171,12 @@ async def generate_recipe_endpoint(
     inventory_list = [{"name": item.item_name, "quantity": item.quantity, "unit": item.unit} for item in inventory_items]
     
     profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if not profile:
+        profile = UserProfile(user_id=current_user.id, recipe_generation_count=0)
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+
     preferences = {
         "dietary_restrictions": profile.dietary_restrictions if profile else [],
         "allergies": profile.allergies if profile else [],
@@ -66,100 +184,147 @@ async def generate_recipe_endpoint(
     }
 
     model_service = request.app.state.model_service
-    
-    if body.compare:
-        result = model_service.generate_comparison(inventory_list, preferences, body.user_request)
-        # We only save the finetuned one to history for now, or maybe both? 
-        # For simplicity, let's assume the user interacts with the finetuned one primarily.
-        recipe_content = result["finetuned"]
-    else:
-        recipe_content = model_service.generate_recipe(inventory_list, preferences, body.user_request, use_finetuned=True)
-        result = {"recipe": recipe_content}
 
-    # Try to parse JSON to ensure it's valid before saving
-    # Try to parse JSON to ensure it's valid before saving
-    try:
-        # Improved JSON extraction logic
-        import re
-        
-        # 1. Try to find JSON inside markdown code blocks first
-        code_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', recipe_content, re.DOTALL)
-        if code_block_match:
-            recipe_json = json.loads(code_block_match.group(1))
-        else:
-            # 2. Fallback: Find the first valid JSON object in the text
-            start_index = recipe_content.find('{')
-            if start_index != -1:
-                # Try to find the matching closing brace by counting
-                balance = 0
-                end_index = -1
-                in_string = False
-                escape = False
-                
-                for i, char in enumerate(recipe_content[start_index:], start=start_index):
-                    if escape:
-                        escape = False
-                        continue
-                    
-                    if char == '\\':
-                        escape = True
-                        continue
-                    
-                    if char == '"':
-                        in_string = not in_string
-                        continue
-                    
-                    if not in_string:
-                        if char == '{':
-                            balance += 1
-                        elif char == '}':
-                            balance -= 1
-                            if balance == 0:
-                                end_index = i
-                                break
-                
-                if end_index != -1:
-                    try:
-                        recipe_json = json.loads(recipe_content[start_index:end_index+1])
-                    except json.JSONDecodeError:
-                        # Fallback to greedy if balanced fails (unlikely but safe)
-                        json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
-                        if json_match:
-                            try:
-                                recipe_json = json.loads(json_match.group(0))
-                            except:
-                                recipe_json = {"raw_text": recipe_content}
-                        else:
-                            recipe_json = {"raw_text": recipe_content}
-                else:
-                    # No balanced brace found, try greedy
-                    json_match = re.search(r'\{.*\}', recipe_content, re.DOTALL)
-                    if json_match:
-                        try:
-                            recipe_json = json.loads(json_match.group(0))
-                        except:
-                            recipe_json = {"raw_text": recipe_content}
-                    else:
-                        recipe_json = {"raw_text": recipe_content}
-            else:
-                recipe_json = {"raw_text": recipe_content}
-    except Exception as e:
-        print(f"JSON parsing error: {e}")
-        recipe_json = {"raw_text": recipe_content}
+    next_generation_count = (profile.recipe_generation_count or 0) + 1
+    is_comparison = body.compare or next_generation_count % 7 == 0
 
-    # Save to history
+    if is_comparison:
+        # Generate two variants using the same external API (fresh calls)
+        variant_a_raw = model_service.generate_recipe(
+            inventory_list, preferences, body.user_request, use_finetuned=True, temperature=0.7
+        )
+        variant_b_raw = model_service.generate_recipe(
+            inventory_list, preferences, body.user_request, use_finetuned=True, temperature=0.7
+        )
+
+        variant_a = _sanitize_recipe(_extract_recipe_json(variant_a_raw))
+        variant_b = _sanitize_recipe(_extract_recipe_json(variant_b_raw))
+
+        preference_entry = RecipePreference(
+            user_id=current_user.id,
+            prompt=body.user_request,
+            user_query=body.user_request,
+            servings=body.servings,
+            generation_number=next_generation_count,
+            variant_a=variant_a,
+            variant_b=variant_b,
+            variant_a_raw=variant_a_raw if isinstance(variant_a_raw, str) else json.dumps(variant_a_raw),
+            variant_b_raw=variant_b_raw if isinstance(variant_b_raw, str) else json.dumps(variant_b_raw),
+            created_at=datetime.utcnow()
+        )
+
+        profile.recipe_generation_count = next_generation_count
+        db.add(preference_entry)
+        db.commit()
+        db.refresh(preference_entry)
+
+        return {
+            "status": "success",
+            "mode": "comparison",
+            "generation_count": next_generation_count,
+            "preference_id": preference_entry.id,
+            "data": {
+                "variant_a": variant_a,
+                "variant_b": variant_b
+            }
+    }
+
+    # Standard single recipe generation
+    recipe_content = model_service.generate_recipe(
+        inventory_list, preferences, body.user_request, use_finetuned=True
+    )
+    recipe_json = _sanitize_recipe(_extract_recipe_json(recipe_content))
+
     history_entry = RecipeHistory(
         user_id=current_user.id,
         recipe_json=recipe_json,
+        raw_response=recipe_content if isinstance(recipe_content, str) else json.dumps(recipe_content),
         user_query=body.user_request,
         servings=body.servings,
         created_at=datetime.utcnow()
     )
+    profile.recipe_generation_count = next_generation_count
     db.add(history_entry)
     db.commit()
     db.refresh(history_entry)
 
-    return {"status": "success", "data": result, "history_id": history_entry.id}
+    return {
+        "status": "success",
+        "mode": "single",
+        "generation_count": next_generation_count,
+        "data": {"recipe": recipe_json},
+        "history_id": history_entry.id
+    }
+
+
+@router.post("/preference/{preference_id}/choose")
+def choose_preference(
+    preference_id: int,
+    body: PreferenceChoiceRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    choice = body.chosen_variant.upper()
+    if choice not in ("A", "B"):
+        raise HTTPException(status_code=400, detail="chosen_variant must be 'A' or 'B'")
+
+    pref = db.query(RecipePreference).filter(
+        RecipePreference.id == preference_id,
+        RecipePreference.user_id == current_user.id
+    ).first()
+    if not pref:
+        raise HTTPException(status_code=404, detail="Preference not found")
+
+    chosen_json = pref.variant_a if choice == "A" else pref.variant_b
+    rejected = "B" if choice == "A" else "A"
+
+    history_entry = RecipeHistory(
+        user_id=current_user.id,
+        recipe_json=chosen_json,
+        user_query=pref.prompt or pref.user_query or "",
+        servings=body.servings,
+        created_at=datetime.utcnow()
+    )
+    pref.chosen_variant = choice
+    pref.rejected_variant = rejected
+    pref.chosen_at = datetime.utcnow()
+    pref.updated_at = datetime.utcnow()
+    pref.chosen_recipe_history_id = None
+
+    db.add(history_entry)
+    db.commit()
+    db.refresh(history_entry)
+
+    pref.chosen_recipe_history_id = history_entry.id
+    db.commit()
+
+    return {
+        "status": "success",
+        "preference_id": preference_id,
+        "chosen_variant": choice,
+        "history_id": history_entry.id
+    }
+
+
+@router.post("/preference/{preference_id}/skip")
+def skip_preference(
+    preference_id: int,
+    body: PreferenceSkipRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    pref = db.query(RecipePreference).filter(
+        RecipePreference.id == preference_id,
+        RecipePreference.user_id == current_user.id
+    ).first()
+    if not pref:
+        raise HTTPException(status_code=404, detail="Preference not found")
+
+    pref.skipped = True
+    pref.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {"status": "success", "preference_id": preference_id, "skipped": True}
 
 @router.post("/{history_id}/feedback")
 def submit_feedback(
@@ -246,9 +411,12 @@ def get_recipe_history(db: Session = Depends(get_db), current_user: User = Depen
 @router.post("/video")
 def generate_recipe_video(body: VideoGenerateRequest):
     """
-    Generate a recipe video. Defaults to a mock URL; when VIDEO_GEN_ENABLED is true and the
-    Google GenAI client plus API key are present, attempts a live generation. Falls back to
-    mock on errors to avoid breaking UX.
+    Generate a recipe video using Google Veo 3.1 API.
+    
+    When VIDEO_GEN_ENABLED is true and API key is configured, attempts live generation.
+    Falls back to mock video URL on errors to maintain stable UX.
+    
+    Reference: https://ai.google.dev/gemini-api/docs/video
     """
     prompt = body.prompt.strip()
     if not prompt:
@@ -259,32 +427,97 @@ def generate_recipe_video(body: VideoGenerateRequest):
 
     if VIDEO_GEN_ENABLED and genai and VIDEO_GEN_API_KEY:
         try:
+            print(f"🎬 Starting video generation with model: {VIDEO_GEN_MODEL}")
+            print(f"📝 Prompt: {prompt[:100]}...")
+            
+            # Initialize client following official documentation
             client = genai.Client(api_key=VIDEO_GEN_API_KEY)
+            
+            # Start video generation (async operation)
             operation = client.models.generate_videos(
                 model=VIDEO_GEN_MODEL,
                 prompt=prompt,
             )
+            print(f"📊 Operation started: {operation.name if hasattr(operation, 'name') else 'unknown'}")
 
+            # Poll until video is ready (following official docs pattern)
             start_time = time.time()
+            poll_count = 0
             while not operation.done:
-                if time.time() - start_time > VIDEO_GEN_TIMEOUT:
+                elapsed = time.time() - start_time
+                if elapsed > VIDEO_GEN_TIMEOUT:
+                    print(f"⏰ Video generation timed out after {elapsed:.0f}s")
                     raise HTTPException(status_code=504, detail="Video generation timed out")
-                time.sleep(max(1, VIDEO_GEN_POLL_SECONDS))
+                
+                poll_count += 1
+                print(f"⏳ Waiting for video... (poll #{poll_count}, {elapsed:.0f}s elapsed)")
+                time.sleep(VIDEO_GEN_POLL_SECONDS)
+                
+                # Refresh operation status (per official docs)
                 operation = client.operations.get(operation)
 
-            generated_video = operation.response.generated_videos[0]
-            # Prefer streaming URI if available
-            if hasattr(generated_video.video, "uri"):
-                video_url = generated_video.video.uri
+            # Extract video URL from completed operation
+            if operation.response and operation.response.generated_videos:
+                generated_video = operation.response.generated_videos[0]
+                
+                # Try multiple ways to get the video URL
+                if hasattr(generated_video, 'video'):
+                    if hasattr(generated_video.video, 'uri'):
+                        video_url = generated_video.video.uri
+                    elif hasattr(generated_video.video, 'url'):
+                        video_url = generated_video.video.url
+                
+                mode = "live"
+                print(f"✅ Video generated successfully: {video_url[:50]}...")
             else:
-                video_url = VIDEO_FALLBACK_URL
-            mode = "live"
+                print("⚠️ No video in response, using fallback")
+                
         except HTTPException:
             raise
         except Exception as e:
             # Silent fallback keeps the front end stable
-            print(f"Video generation failed, falling back to mock: {e}")
+            print(f"❌ Video generation failed: {type(e).__name__}: {e}")
             video_url = VIDEO_FALLBACK_URL
             mode = "mock"
 
     return {"status": "success", "video_url": video_url, "mode": mode}
+
+@router.post("/warmup")
+def warmup_llm_service(request: Request):
+    """
+    Lightweight warmup endpoint to trigger external LLM service cold start.
+    Called on user login to reduce latency for first recipe generation.
+    Returns immediately without waiting for full generation (fire-and-forget).
+    """
+    import threading
+    
+    model_service = request.app.state.model_service
+    
+    # Minimal payload to wake up the Cloud Run service
+    minimal_inventory = [{"name": "rice", "quantity": 1, "unit": "kg"}]
+    minimal_preferences = {
+        "dietary_restrictions": [],
+        "cooking_style": "balanced",
+        "custom_preferences": ""
+    }
+    
+    def warmup_task():
+        """Background task to trigger LLM service warmup"""
+        try:
+            # Fire a lightweight request with minimal tokens
+            model_service.generate_recipe(
+                inventory=minimal_inventory,
+                preferences=minimal_preferences,
+                user_request="warmup",
+                max_tokens=50,  # Very short response to minimize cost
+                temperature=0.7
+            )
+        except Exception as e:
+            # Silent fail - warmup is optional, don't disrupt login
+            print(f"🔥 Warmup request completed with exception (expected): {e}")
+    
+    # Start warmup in background thread - don't block response
+    thread = threading.Thread(target=warmup_task, daemon=True)
+    thread.start()
+    
+    return {"status": "warming", "message": "LLM service warmup initiated"}

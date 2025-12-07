@@ -1,83 +1,174 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, ChefHat, User, LogOut, ShoppingBasket, Clock } from 'lucide-react';
+import { LayoutDashboard, ChefHat, User, LogOut, ShoppingBasket, Clock, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Snowfall from './Snowfall';
+import { useToast } from './Toast';
 
 const Layout = ({ children }) => {
+    const toast = useToast();
     const { logout, user } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
 
     const handleLogout = () => {
         logout();
+        toast.info('See you soon! 👋');
         navigate('/login');
     };
 
     const navItems = [
-        { path: '/dashboard', icon: LayoutDashboard, label: 'Inventory' },
-        { path: '/recipes', icon: ChefHat, label: 'Recipes' },
-        { path: '/history', icon: Clock, label: 'History' },
-        { path: '/profile', icon: User, label: 'Profile' },
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Inventory', emoji: '🎄' },
+        { path: '/recipes', icon: ChefHat, label: 'Recipes', emoji: '👨‍🍳' },
+        { path: '/history', icon: Clock, label: 'History', emoji: '📜' },
+        { path: '/profile', icon: User, label: 'Profile', emoji: '⚙️' },
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50 flex">
+        <div className="min-h-screen bg-secondary-950 flex relative overflow-hidden">
+            {/* Subtle Background Effects */}
+            <div className="fixed inset-0 bg-aurora pointer-events-none" />
+            <Snowfall enabled={true} density="light" />
+
             {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-slate-200 fixed h-full z-20 hidden md:flex flex-col">
-                <div className="p-6 border-b border-slate-100">
+            <aside className="w-72 fixed h-full z-20 hidden md:flex flex-col glass-panel-solid border-r border-white/5">
+                {/* Logo Section */}
+                <div className="p-6 border-b border-white/5">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
-                            <ShoppingBasket size={24} />
+                        <div className="relative">
+                            <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
+                                <ShoppingBasket size={26} />
+                            </div>
+                            {/* Festive sparkle */}
+                            <Sparkles
+                                size={14}
+                                className="absolute -top-1 -right-1 text-gold-400 animate-twinkle"
+                            />
                         </div>
-                        <h1 className="text-xl font-bold bg-gradient-to-r from-primary-700 to-primary-500 bg-clip-text text-transparent">
-                            PantryPilot
-                        </h1>
+                        <div>
+                            <h1 className="text-xl font-bold font-display text-gradient">
+                                PantryPilot
+                            </h1>
+                            <p className="text-xs text-slate-500">AI Kitchen Assistant</p>
+                        </div>
                     </div>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2">
+                {/* Navigation */}
+                <nav className="flex-1 p-4 space-y-1.5">
+                    {navItems.map((item, index) => {
+                        const isActive = location.pathname === item.path;
+                        return (
+                            <motion.div
+                                key={item.path}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                            >
+                                <Link
+                                    to={item.path}
+                                    className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isActive
+                                        ? 'bg-primary-500/15 text-primary-400 border border-primary-500/20 shadow-sm shadow-primary-500/10'
+                                        : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                                        }`}
+                                >
+                                    <div className={`p-2 rounded-lg transition-all duration-300 ${isActive
+                                        ? 'bg-primary-500/20'
+                                        : 'bg-secondary-800/50 group-hover:bg-secondary-700/50'
+                                        }`}>
+                                        <item.icon
+                                            size={18}
+                                            className={isActive ? 'text-primary-400' : 'text-slate-500 group-hover:text-slate-300'}
+                                        />
+                                    </div>
+                                    <span className="font-medium">{item.label}</span>
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="activeIndicator"
+                                            className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-400"
+                                        />
+                                    )}
+                                </Link>
+                            </motion.div>
+                        );
+                    })}
+                </nav>
+
+                {/* User Section */}
+                <div className="p-4 border-t border-white/5">
+                    <div className="flex items-center gap-3 px-4 py-3 mb-2 rounded-xl bg-secondary-800/30">
+                        <div className="relative">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center text-secondary-900 font-bold text-sm shadow-lg shadow-gold-500/20">
+                                {user?.username?.[0]?.toUpperCase()}
+                            </div>
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-evergreen-500 rounded-full border-2 border-secondary-900" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{user?.username}</p>
+                            <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all duration-200 group"
+                    >
+                        <LogOut size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                        <span>Sign Out</span>
+                    </button>
+                </div>
+
+                {/* Footer decoration */}
+                <div className="px-6 py-4 border-t border-white/5">
+                    <p className="text-xs text-center text-slate-600">
+                        ❄️ Happy Holidays ❄️
+                    </p>
+                </div>
+            </aside>
+
+            {/* Mobile Header */}
+            <div className="md:hidden fixed top-0 left-0 right-0 z-30 glass-panel-solid border-b border-white/5 px-4 py-3">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center text-white">
+                            <ShoppingBasket size={18} />
+                        </div>
+                        <span className="font-bold font-display text-gradient">PantryPilot</span>
+                    </div>
+                    <button
+                        onClick={handleLogout}
+                        className="p-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <LogOut size={20} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Mobile Bottom Navigation */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 glass-panel-solid border-t border-white/5 px-2 py-2">
+                <div className="flex justify-around">
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         return (
                             <Link
                                 key={item.path}
                                 to={item.path}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
-                                    ? 'bg-primary-50 text-primary-600 font-medium shadow-sm'
-                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${isActive
+                                    ? 'text-primary-400'
+                                    : 'text-slate-500'
                                     }`}
                             >
-                                <item.icon size={20} className={isActive ? 'text-primary-600' : 'text-slate-400'} />
-                                {item.label}
+                                <item.icon size={20} />
+                                <span className="text-xs font-medium">{item.label}</span>
                             </Link>
                         );
                     })}
-                </nav>
-
-                <div className="p-4 border-t border-slate-100">
-                    <div className="flex items-center gap-3 px-4 py-3 mb-2">
-                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm">
-                            {user?.username?.[0]?.toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 truncate">{user?.username}</p>
-                            <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                        <LogOut size={18} />
-                        Sign Out
-                    </button>
                 </div>
-            </aside>
+            </nav>
 
             {/* Main Content */}
-            <main className="flex-1 md:ml-64 min-h-screen">
-                <div className="p-8 max-w-7xl mx-auto">
+            <main className="flex-1 md:ml-72 min-h-screen pt-16 md:pt-0 pb-20 md:pb-0">
+                <div className="p-6 md:p-8 max-w-7xl mx-auto">
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}

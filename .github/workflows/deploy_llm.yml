@@ -22,6 +22,11 @@ jobs:
     - name: Configure Docker for Artifact Registry
       run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
+    - name: Download LoRA adapter from GCS
+      run: |
+        mkdir -p model_development/models
+        gcloud storage cp -r gs://recipegen-llm-models/llama3b_lambda_lora ./model_development/models/ --no-user-output-enabled
+
     - name: Build Docker image
       run: |
         docker build -t us-central1-docker.pkg.dev/ultimate-bit-478920-i7/pantrypilot/pantrypilot-llm:latest .

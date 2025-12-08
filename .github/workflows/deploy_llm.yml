@@ -26,11 +26,9 @@ jobs:
     - name: Configure Docker for Artifact Registry
       run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
-    - name: Download models from GCS
+    - name: Download LoRA from GCS
       run: |
         mkdir -p model_deployment/cr_backend/models
-        gcloud storage cp -r gs://pantrypilot-bucket/llama3b_lambda_lora model_deployment/cr_backend/models/
-        gcloud storage cp -r gs://pantrypilot-bucket/llama_base model_deployment/cr_backend/models/
 
     - name: Build Docker image
       run: |

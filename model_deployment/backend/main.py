@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from database import engine
 from models import Base
-from routers import auth, inventory, recipes, users, admin
+from routers import auth, inventory, recipes, users, admin, training
 from model_service import get_model_service
 
 # Create tables
@@ -49,6 +49,7 @@ app.include_router(inventory.router)
 app.include_router(recipes.router)
 app.include_router(users.router)
 app.include_router(admin.router)
+app.include_router(training.router)
 
 @app.get("/")
 def root():

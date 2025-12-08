@@ -13,7 +13,8 @@ jobs:
       uses: actions/checkout@v3
 
     - name: '[DEBUG] Check GCP Credentials Secret Length'
-      run: echo "Secret length: $(echo -n '${{ secrets.GCP_CREDENTIALS }}' | wc -c)"
+      run: |
+        echo "Secret length: $(echo -n '${{ secrets.GCP_CREDENTIALS }}' | wc -c)"
 
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2

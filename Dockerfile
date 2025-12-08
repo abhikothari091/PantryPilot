@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y python3 python3-pip git && apt-get clea
 # Make python command available (pip already exists)
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
-COPY requirements.txt .
+COPY model_deployment/backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY model_deployment/backend/main.py model_deployment/backend/model_service.py model_deployment/backend/database.py ./

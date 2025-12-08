@@ -52,7 +52,4 @@ jobs:
           --timeout=900 \
           --port=7860 \
           --min-instances=0 \
-          --max-instances=1 \
-          --startup-probe-initial-delay=0 \
-          --startup-probe-timeout=600 \
-          --startup-probe-period=10
+          --max-instances=1

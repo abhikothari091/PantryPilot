@@ -2,6 +2,7 @@ FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
 
 WORKDIR /app
 
+# Install Python + pip
 RUN apt-get update && apt-get install -y python3 python3-pip git && apt-get clean
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 

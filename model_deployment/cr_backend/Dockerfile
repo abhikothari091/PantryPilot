@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Download base LLaMA model into /app/models/llama_base
-RUN python3 - << 'EOF'
+RUN python3 -c '
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import os
 
@@ -23,8 +23,8 @@ print("Downloading Llama 3B base model...")
 AutoTokenizer.from_pretrained(model_id).save_pretrained(target)
 AutoModelForCausalLM.from_pretrained(model_id).save_pretrained(target)
 print("Base model downloaded to", target)
-EOF
+'
 
-EXPOSE "7860"
+EXPOSE 7860
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]

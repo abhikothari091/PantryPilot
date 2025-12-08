@@ -6,6 +6,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y python3 python3-pip git && apt-get clean
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
+# Install gsutil
+RUN apt-get update && apt-get install -y python3-pip && pip install gsutil
+
 # Copy requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

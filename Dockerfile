@@ -11,7 +11,7 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 COPY model_deployment/backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY model_deployment/backend/main.py model_deployment/backend/model_service.py model_deployment/backend/database.py ./
+COPY model_deployment/backend/main.py model_deployment/backend/model_service.py model_deployment/backend/database.py model_deployment/backend/models.py ./
 COPY model_development/models ./models
 
 EXPOSE 7860

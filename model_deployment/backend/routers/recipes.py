@@ -298,6 +298,24 @@ def choose_preference(
     pref.chosen_recipe_history_id = history_entry.id
     db.commit()
 
+    # Check if user has reached preference threshold for retraining notification
+    total_preferences = db.query(RecipePreference).filter(
+        RecipePreference.user_id == current_user.id,
+        RecipePreference.skipped == False,
+        RecipePreference.chosen_variant != None
+    ).count()
+    
+    # Send notification if threshold reached (50 preferences)
+    from services.notification_service import check_and_notify_threshold
+    import os
+    base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    check_and_notify_threshold(
+        user_id=current_user.id,
+        username=current_user.username,
+        preference_count=total_preferences,
+        base_url=base_url
+    )
+
     return {
         "status": "success",
         "preference_id": preference_id,

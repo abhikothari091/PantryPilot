@@ -2,22 +2,18 @@ FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
 
 WORKDIR /app
 
-# Install Python + pip
-RUN apt-get update && apt-get install -y python3 python3-pip git && apt-get clean
-RUN ln -sf /usr/bin/python3 /usr/bin/python
+# Install Python + pip and gcloud
+RUN apt-get update && apt-get install -y python3 python3-pip git curl && pip install gcloud
 
-# Install gsutil
-RUN apt-get update && apt-get install -y python3-pip && pip install gsutil
-
-# Copy requirements and install dependencies
-COPY requirements.txt .
+# Install dependencies from requirements.txt
+COPY requirements.txt . 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of your application code
+# Copy the rest of the application code
 COPY . .
 
-# Download LLaMA model from GCS into /app/models/llama_base
-RUN gsutil -m cp -r gs://pantrypilot-bucket/llama_base /app/models/
+# Download LLaMA model from GCS (since it's already there)
+RUN gcloud storage cp -r gs://pantrypilot-bucket/llama_base /app/models/
 
 EXPOSE 7860
 

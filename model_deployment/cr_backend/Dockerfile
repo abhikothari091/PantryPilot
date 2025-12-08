@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of your application code
 COPY . .
 
-# Download LLaMA model from GCS into /app/models/llama_basee
+# Download LLaMA model from GCS into /app/models/llama_base
 RUN gsutil -m cp -r gs://pantrypilot-bucket/llama_base /app/models/
 
 EXPOSE 7860

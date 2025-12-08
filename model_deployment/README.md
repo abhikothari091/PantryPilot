@@ -146,6 +146,12 @@ Admin (requires admin user)
 - `GET /admin/recipes` → list all recipes with user info
 - `POST /admin/seed` → create admin user (one-time setup)
 
+Training / Retraining Alerts
+- `GET /training/pending` → list users with 50+ preferences (admin only)
+- `POST /training/approve/{user_id}` → approve retraining for a user
+- `GET /training/export/{user_id}` → export user preferences in DPO format (admin only)
+- **Slack Alerts**: When a user reaches 50 preference choices, a Slack notification is sent automatically (requires `SLACK_WEBHOOK_URL` env var)
+
 ---
 
 ## Smart Inventory Logic (utils/smart_inventory.py)

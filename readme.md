@@ -979,11 +979,12 @@ Full-stack deployment of PantryPilot (React/Vite frontend + FastAPI backend + Po
 - **Admin Dashboard**: View application metrics (user count, recipe stats, inventory analytics, feedback distribution). Admin-only access.
 - **Interactive Onboarding Tour**: Built with react-joyride. Users can click "Start Tour" in the sidebar to get a guided walkthrough of app features (Dashboard, Recipes, History, Profile).
 - **DPO Comparison Flow**: Every 7th recipe generation shows two variants side-by-side. Users choose A or B, collecting preference data for future model fine-tuning.
+- **Slack Retraining Alerts**: When a user reaches 50 preferences, a Slack notification is automatically sent to admins with an "Approve Retraining" button. Requires `SLACK_WEBHOOK_URL` env var.
 - **Strict Dietary Restrictions**: Backend enforces dietary preferences (vegetarian, vegan, gluten-free, etc.) with explicit prompts to the LLM. Allergies are marked as "life-threatening" to ensure compliance.
 - Configurable CORS via `FRONTEND_ORIGIN`; frontend targets backend via `VITE_API_BASE_URL`.
-- Environment vars: `DATABASE_URL`, `SECRET_KEY`, optional video toggles.
+- Environment vars: `DATABASE_URL`, `SECRET_KEY`, `SLACK_WEBHOOK_URL` (optional), video toggles.
 - Deploy steps (Render reference):
-  - Backend root `model_deployment/backend`: build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, set envs (`DATABASE_URL`, `SECRET_KEY`, `FRONTEND_ORIGIN`, `VIDEO_GEN_ENABLED=false`).
+  - Backend root `model_deployment/backend`: build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, set envs (`DATABASE_URL`, `SECRET_KEY`, `FRONTEND_ORIGIN`, `SLACK_WEBHOOK_URL`, `VIDEO_GEN_ENABLED=false`).
   - Frontend root `model_deployment/frontend`: build `npm install && npm run build`, publish `dist`, env `VITE_API_BASE_URL=https://<backend>`.
 - Detailed documentation, flow diagrams, API list, and data model: see [model_deployment/README.md](model_deployment/README.md).
 

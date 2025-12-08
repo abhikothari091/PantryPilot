@@ -12,27 +12,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Check for GCP Credentials Secret
-      run: |
-        if [ -n "${{ secrets.GCP_CREDENTIALS }}" ]; then
-          echo "GCP_CREDENTIALS secret is present."
-        else
-          echo "GCP_CREDENTIALS secret is NOT present or is empty."
-          exit 1
-        fi
-
     - name: Set up Cloud SDK
+      id: gcloud-sdk
       uses: google-github-actions/setup-gcloud@v2
       with:
         project_id: ultimate-bit-478920-i7
         service_account_key: ${{ secrets.GCP_CREDENTIALS }}
-        export_default_credentials: true
+
+    - name: Authenticate with GCP
+      run: gcloud auth activate-service-account --key-file=${{ steps.gcloud-sdk.outputs.credentials_file_path }}
 
     - name: Configure Docker for Artifact Registry
       run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
     - name: Download LoRA adapter from GCS
       run: |
+        gcloud auth list
         mkdir -p model_development/models
         gcloud storage cp -r gs://pantrypilot-bucket/llama3b_lambda_lora ./model_development/models/ --no-user-output-enabled
 

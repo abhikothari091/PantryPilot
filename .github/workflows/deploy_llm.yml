@@ -12,6 +12,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Check for GCP Credentials Secret
+      run: |
+        if [ -n "${{ secrets.GCP_CREDENTIALS }}" ]; then
+          echo "GCP_CREDENTIALS secret is present."
+        else
+          echo "GCP_CREDENTIALS secret is NOT present or is empty."
+          exit 1
+        fi
+
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
       with:

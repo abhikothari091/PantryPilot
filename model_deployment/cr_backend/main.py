@@ -81,7 +81,7 @@ async def startup_event():
 
     # Load Llama 3B model with Lambda-trained LoRA adapter
     from pathlib import Path
-    model_path = str(Path(__file__).parent / "models" / "llama_base")
+    model_path = "meta-llama/Llama-3.2-3B-Instruct"  # HuggingFace ID, not local path
     adapter_path = Path(__file__).parent / "models" / "llama3b_lambda_lora"
 
     print(f"📍 Base model: {model_path}")

@@ -15,6 +15,5 @@ COPY . .
 
 EXPOSE 7860
 
-CMD gcloud storage cp -r gs://pantrypilot-bucket/llama_base /app/models/ && \
-    gcloud storage cp -r gs://pantrypilot-bucket/llama3b_lambda_lora /app/models/ && \
+CMD gcloud storage cp -r gs://pantrypilot-bucket/llama3b_lambda_lora /app/models/ && \
     uvicorn main:app --host 0.0.0.0 --port 7860

@@ -8,6 +8,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from pathlib import Path
 from typing import List, Dict, Optional
+import os
 
 
 class ModelService:
@@ -27,7 +28,10 @@ class ModelService:
         print(f"📥 Loading base model: {base_model_id}")
 
         # Load tokenizer from local base model folder
-        self.tokenizer = AutoTokenizer.from_pretrained(self.base_model_id)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.base_model_id,
+            token=os.environ.get("HF_TOKEN")
+        )
 
         # fp16 only for GPU, fp32 otherwise
         use_fp16 = (self.device == "cuda")
@@ -37,7 +41,8 @@ class ModelService:
         self.base_model = AutoModelForCausalLM.from_pretrained(
             self.base_model_id,
             torch_dtype=dtype,
-            low_cpu_mem_usage=True
+            low_cpu_mem_usage=True,
+            token=os.environ.get("HF_TOKEN")
         ).to(self.device)
 
         print(f"✅ Base model loaded")

@@ -52,4 +52,6 @@ jobs:
           --timeout=900 \
           --port=7860 \
           --min-instances=0 \
-          --max-instances=1
+          --max-instances=1 \
+          --no-gpu-zonal-redundancy \
+          --set-env-vars=HF_TOKEN=${{ secrets.HF_TOKEN }}

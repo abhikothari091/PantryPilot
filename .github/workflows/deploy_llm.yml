@@ -40,7 +40,7 @@ jobs:
 
     - name: Deploy to Cloud Run GPU
       run: |
-        gcloud run deploy pantrypilot-llm \
+        gcloud run deploy pantrypilot-llm-v2 \
           --image=us-central1-docker.pkg.dev/ultimate-bit-478920-i7/pantrypilot/pantrypilot-llm:latest \
           --region=us-central1 \
           --platform=managed \
@@ -52,4 +52,7 @@ jobs:
           --timeout=900 \
           --port=7860 \
           --min-instances=0 \
-          --max-instances=1
+          --max-instances=1 \
+          --startup-probe-initial-delay=0 \
+          --startup-probe-timeout=600 \
+          --startup-probe-period=10

@@ -3,6 +3,8 @@ name: Deploy to Cloud Run GPU
 on:
   push:
     branches: ["main", "test-llm-deployment"]
+    paths:
+      - 'model_deployment/cr_backend/**'
 
 jobs:
   deploy:

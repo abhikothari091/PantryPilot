@@ -180,7 +180,6 @@ Backend (required unless noted)
 - `FRONTEND_ORIGIN` — optional; add prod frontend origin to CORS (localhost defaults always allowed)
 - `VIDEO_GEN_ENABLED` — optional, default false
 - `VIDEO_GEN_API_KEY`, `VIDEO_GEN_MODEL`, `VIDEO_GEN_TIMEOUT`, `VIDEO_GEN_POLL_SECONDS` — optional, for live video gen
-- (If your recipe/OCR endpoints need keys, set them here; current endpoints are open)
 
 Frontend
 - `VITE_API_BASE_URL` — required in prod (backend URL)
@@ -277,7 +276,19 @@ flowchart TD
 - DB: Do not use SQLite in prod; Postgres/Neon only. Ensure `DATABASE_URL` set before start.
 - Video: Mock by default; enable only when Veo creds are provided. Fallback to mock on errors to avoid UX breaks.
 - OCR: External dependency; if down, upload returns error payload without crashing UI.
-- External recipe API: If it times out, backend saves a raw_text error in history; frontend handles gracefully.
+- External recipe API: If it times out, backend saves a raw_text error in history; frontend handles gracefully. Tune with `MODEL_SERVICE_TIMEOUT` (seconds, default 60) for cold starts.
+- Observability (logging/metrics):
+  - Structured JSON logs with `request_id` for correlation; each request logs method/path/status/duration_ms/user_agent.
+  - `GET /healthz`: readiness probe that reports DB status and latency (degraded if DB unavailable).
+  - `GET /metrics`: Prometheus scrape endpoint exporting request counters and latency histograms with low-cardinality paths.
+- Post-train manual registration/validation:
+  - Script: `model_deployment/ops/register_and_validate.py`
+  - Usage (after manual DPO training + deploy):  
+    `python model_deployment/ops/register_and_validate.py --version dpo-v1.1 --artifact gs://.../llama3b_lora --run-eval --max-examples 5`
+  - Behavior: optionally runs lightweight eval + bias eval (limited examples), then appends a registry entry to `model_deployment/model_registry/registry.json` with version, artifact URI, notes, and paths to the latest eval/bias reports.
+- Video generation toggle:
+  - Live Veo generation requires both `VIDEO_GEN_ENABLED=true` **and** `VIDEO_GEN_ALLOW_LIVE=true`, plus `VIDEO_GEN_API_KEY`.
+  - Otherwise the API returns the mock video URL. Prompt is pre-built to request a detailed, stepwise 20s cooking clip.
 
 ---
 

@@ -14,6 +14,8 @@ class ModelService:
         Initialize model service for external API
         """
         self.api_url = "https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe"
+        # Allow runtime override for slow cold starts
+        self.timeout = float(os.getenv("MODEL_SERVICE_TIMEOUT", "60"))
         print(f"🔗 Initialized External Model Service: {self.api_url}")
 
     def generate_recipe(
@@ -87,7 +89,9 @@ class ModelService:
         detailed_request = (
             f"{user_request}"
             f"{restriction_text}"
-            f"Please provide detailed, step-by-step cooking instructions. "
+            "Please provide detailed, step-by-step cooking instructions. "
+            "Use the provided inventory as the primary ingredient source. "
+            "Keep missing/shopping list ingredients to 3 or fewer; prefer substitutions from inventory over adding new items. "
             "Use only ingredients you list in the recipe; do not include ingredients that are unused or marked as 'ignore'. "
             "Keep the ingredient list tightly aligned to the actual steps."
         )
@@ -102,7 +106,7 @@ class ModelService:
         }
 
         try:
-            response = requests.post(self.api_url, json=payload, timeout=30)
+            response = requests.post(self.api_url, json=payload, timeout=self.timeout)
             response.raise_for_status()
             
             data = response.json()

@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 import os
 import time
+import base64
 
 from database import get_db
 from models import RecipeHistory, User, InventoryItem, UserProfile, RecipePreference
@@ -141,6 +142,8 @@ def _sanitize_recipe(recipe_json: dict) -> dict:
 
 # Video generation configuration
 VIDEO_GEN_ENABLED = os.getenv("VIDEO_GEN_ENABLED", "false").lower() == "true"
+# Additional guard: require explicit opt-in for live video generation
+VIDEO_GEN_ALLOW_LIVE = os.getenv("VIDEO_GEN_ALLOW_LIVE", "false").lower() == "true"
 VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1-generate-preview")
 VIDEO_GEN_API_KEY = os.getenv("VIDEO_GEN_API_KEY")
 VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "180"))  # Increased for production
@@ -431,8 +434,8 @@ def generate_recipe_video(body: VideoGenerateRequest):
     """
     Generate a recipe video using Google Veo 3.1 API.
     
-    When VIDEO_GEN_ENABLED is true and API key is configured, attempts live generation.
-    Falls back to mock video URL on errors to maintain stable UX.
+    When VIDEO_GEN_ENABLED and VIDEO_GEN_ALLOW_LIVE are true and API key is configured,
+    attempts live generation. Falls back to mock video URL on errors to maintain stable UX.
     
     Reference: https://ai.google.dev/gemini-api/docs/video
     """
@@ -443,10 +446,20 @@ def generate_recipe_video(body: VideoGenerateRequest):
     video_url = VIDEO_FALLBACK_URL
     mode = "mock"
 
-    if VIDEO_GEN_ENABLED and genai and VIDEO_GEN_API_KEY:
+    # Rich, guided prompt to encourage stepwise cooking visuals
+    detailed_prompt = (
+        "Create a 20-second cooking video for the dish below. "
+        "Show clear, sequential steps (Step 1, Step 2, Step 3) with close-ups of ingredients, pan actions, "
+        "and a final plated hero shot. Natural lighting, no text overlays, no voiceover. "
+        "Keep pacing brisk and visually coherent.\n\n"
+        f"Dish details: {prompt}"
+    )
+
+    # Require explicit allow flag to enable live generation
+    if VIDEO_GEN_ENABLED and VIDEO_GEN_ALLOW_LIVE and genai and VIDEO_GEN_API_KEY:
         try:
             print(f"🎬 Starting video generation with model: {VIDEO_GEN_MODEL}")
-            print(f"📝 Prompt: {prompt[:100]}...")
+            print(f"📝 Prompt: {detailed_prompt[:200]}...")
             
             # Initialize client following official documentation
             client = genai.Client(api_key=VIDEO_GEN_API_KEY)
@@ -454,7 +467,7 @@ def generate_recipe_video(body: VideoGenerateRequest):
             # Start video generation (async operation)
             operation = client.models.generate_videos(
                 model=VIDEO_GEN_MODEL,
-                prompt=prompt,
+                prompt=detailed_prompt,
             )
             print(f"📊 Operation started: {operation.name if hasattr(operation, 'name') else 'unknown'}")
 
@@ -477,16 +490,28 @@ def generate_recipe_video(body: VideoGenerateRequest):
             # Extract video URL from completed operation
             if operation.response and operation.response.generated_videos:
                 generated_video = operation.response.generated_videos[0]
-                
-                # Try multiple ways to get the video URL
-                if hasattr(generated_video, 'video'):
-                    if hasattr(generated_video.video, 'uri'):
-                        video_url = generated_video.video.uri
-                    elif hasattr(generated_video.video, 'url'):
-                        video_url = generated_video.video.url
-                
-                mode = "live"
-                print(f"✅ Video generated successfully: {video_url[:50]}...")
+                video_obj = getattr(generated_video, "video", None)
+                mime_type = "video/mp4"
+                if video_obj and getattr(video_obj, "mime_type", None):
+                    mime_type = video_obj.mime_type
+
+                if video_obj:
+                    try:
+                        # Download the bytes using the official helper and embed as data URL for reliable playback
+                        video_bytes = client.files.download(file=video_obj)
+                        b64 = base64.b64encode(video_bytes).decode("ascii")
+                        video_url = f"data:{mime_type};base64,{b64}"
+                        mode = "live"
+                        print(f"✅ Video generated successfully ({mime_type}), size={len(video_bytes)} bytes")
+                    except Exception as download_exc:
+                        print(f"⚠️ Video download failed: {type(download_exc).__name__}: {download_exc}")
+                        # Fallback to raw URI if provided
+                        if getattr(video_obj, "uri", None):
+                            video_url = video_obj.uri
+                            mode = "live"
+                            print("ℹ️ Using video URI directly.")
+                        else:
+                            print("⚠️ No usable video URI; using fallback.")
             else:
                 print("⚠️ No video in response, using fallback")
                 

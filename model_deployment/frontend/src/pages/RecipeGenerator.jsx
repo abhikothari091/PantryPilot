@@ -895,7 +895,16 @@ const RecipeGenerator = () => {
                                             )}
                                             {videoUrl && (
                                                 <div className="rounded-xl overflow-hidden border border-white/10 bg-black">
-                                                    <video src={videoUrl} controls className="w-full max-h-80" />
+                                                    <video
+                                                        key={videoUrl}
+                                                        src={videoUrl}
+                                                        controls
+                                                        className="w-full max-h-80"
+                                                        onError={() => {
+                                                            setVideoError('Video failed to load; using fallback.');
+                                                            setVideoUrl(VIDEO_MOCK_URL);
+                                                        }}
+                                                    />
                                                 </div>
                                             )}
                                             {videoError && (

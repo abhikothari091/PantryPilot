@@ -973,7 +973,7 @@ This is mainly used to copy tables / summaries into the final report and slides.
 
 ## 🍳 PantryPilot Web Application
 
-Full-stack deployment of PantryPilot (React/Vite frontend + FastAPI backend + Postgres/Neon). Deployed on Render as separate services (backend Web Service, frontend Static Site). Highlights:
+Full-stack deployment of PantryPilot (React/Vite frontend + FastAPI backend + Postgres/Neon). Deployed on Render as separate services (backend Web Service, frontend Static Site). Additionally, a specialized `cr_backend` service is deployed to Google Cloud Run, hosting the finetuned LLM for scalable recipe generation. Highlights:
 
 - **Auth + profiles (JWT)**, inventory CRUD with OCR upload/confirmation, recipe generation via external model API, recipe history, "cooked" deduction with unit conversion, optional video generation (mock by default).
 - **Admin Dashboard**: View application metrics (user count, recipe stats, inventory analytics, feedback distribution). Admin-only access.
@@ -986,6 +986,16 @@ Full-stack deployment of PantryPilot (React/Vite frontend + FastAPI backend + Po
 - Deploy steps (Render reference):
   - Backend root `model_deployment/backend`: build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, set envs (`DATABASE_URL`, `SECRET_KEY`, `FRONTEND_ORIGIN`, `SLACK_WEBHOOK_URL`, `VIDEO_GEN_ENABLED=false`).
   - Frontend root `model_deployment/frontend`: build `npm install && npm run build`, publish `dist`, env `VITE_API_BASE_URL=https://<backend>`.
+
+### Cloud Run Deployment (Finetuned LLM)
+
+For scalable and efficient inference of the finetuned Large Language Model (LLM), a dedicated service is deployed to Google Cloud Run. This service, found in `model_deployment/cr_backend/`, is optimized for LLM inference, providing quick and cost-effective recipe generation.
+
+- **Purpose**: Hosts the fine-tuned LLM for recipe generation, ensuring high availability and scalability.
+- **Technology**: FastAPI application containerized with Docker, deployed on Google Cloud Run.
+- Automated Deployment: Deployment to Cloud Run is automated via a GitHub Actions workflow (`.github/workflows/deploy_llm.yml`).
+- Details: For comprehensive setup, build, and environment variable configurations, refer to the [model_deployment/README.md](model_deployment/README.md).
+
 - Detailed documentation, flow diagrams, API list, and data model: see [model_deployment/README.md](model_deployment/README.md).
 
 ---

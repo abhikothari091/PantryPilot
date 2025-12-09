@@ -87,6 +87,13 @@ model_deployment/
     database.py             # SessionLocal engine
     requirements.txt
     .env.example            # suggested env layout (not committed with secrets)
+  cr_backend/
+    main.py                 # FastAPI app specifically for Cloud Run deployment of finetuned LLM
+    model_service.py        # Optimized LLM inference service
+    database.py             # Database connection for LLM (if any)
+    models.py               # Pydantic models for LLM requests/responses
+    Dockerfile              # Containerization for Cloud Run
+    requirements.txt        # Python dependencies for Cloud Run
   frontend/
     public/logo.png         # favicon/logo
     src/api/axios.js        # axios instance, baseURL from VITE_API_BASE_URL
@@ -233,6 +240,30 @@ Frontend (Static Site)
 - Env: `VITE_API_BASE_URL=https://<backend>`
 
 Branch selection: Render lets you pick a branch per service; set it in service settings. Redeploy after env/branch changes.
+
+### Cloud Run Deployment for LLM (cr_backend)
+
+The `cr_backend` folder contains a specialized FastAPI application designed for deployment to Google Cloud Run. This service hosts the finetuned LLM model, providing an efficient and scalable endpoint for recipe generation.
+
+#### Project Structure (`cr_backend/`)
+```
+cr_backend/
+  main.py           # FastAPI application entry point. Defines the API endpoints, including health checks and the primary recipe generation route.
+  model_service.py  # Handles loading the finetuned LLM from Hugging Face and running inference. Contains all the logic for tokenization, generation, and decoding.
+  database.py       # Sets up the database connection. May be used for logging requests or storing other operational data (currently minimal).
+  models/           # (currently empty) Intended for Pydantic models to define request and response schemas for validation and API documentation.
+  Dockerfile        # Instructions to build the production Docker image. Installs dependencies, sets up the environment, and defines the container's start command.
+  requirements.txt  # A list of all Python packages required for the service to run, including FastAPI, Uvicorn, Transformers, and PyTorch.
+```
+
+- Root: `model_deployment/cr_backend`
+- Build: The `Dockerfile` within `cr_backend` handles dependencies and environment setup. Build using `gcloud builds submit --tag gcr.io/[PROJECT-ID]/pantry-pilot-llm-service`.
+- Start: `gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app` (defined in Dockerfile)
+- Env:
+    - `HF_MODEL_ID`: Hugging Face model ID for the finetuned LLM.
+    - `HF_TOKEN`: Hugging Face authentication token (if model is private).
+    - `DATABASE_URL`: Connection string for a PostgreSQL database (if LLM service requires persistence).
+    - `SECRET_KEY`: For any internal API authentication.
 
 ---
 

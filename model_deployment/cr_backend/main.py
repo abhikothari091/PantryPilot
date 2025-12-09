@@ -80,8 +80,9 @@ async def startup_event():
     print("🚀 Initializing RecipeGen-LLM API...")
 
     # Load Llama 3B model with Lambda-trained LoRA adapter
-    model_path = "meta-llama/Llama-3.2-3B-Instruct"
-    adapter_path = Path(__file__).parent.parent / "models" / "llama3b_lambda_lora"
+    from pathlib import Path
+    model_path = "meta-llama/Llama-3.2-3B-Instruct"  # HuggingFace ID, not local path
+    adapter_path = Path(__file__).parent / "models" / "llama3b_lambda_lora"
 
     print(f"📍 Base model: {model_path}")
     print(f"📍 LoRA adapter: {adapter_path}")
@@ -227,3 +228,4 @@ async def submit_reward_feedback(request: RewardRequest):
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+

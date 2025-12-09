@@ -1,0 +1,281 @@
+INFO:     Will watch for changes in these directories: ['/Users/DELL/PantryPilot-1/model_deployment/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [21398] using WatchFiles
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:252: FutureWarning: You are using a Python version (3.9.6) past its end of life. Google will update google.api_core with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [21400]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+🚀 Initializing PantryPilot Backend...
+🔗 Initialized External Model Service: https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe
+✅ Model Service Ready
+INFO:     127.0.0.1:57947 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57950 - "POST /auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57954 - "POST /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57956 - "POST /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57959 - "POST /inventory/ HTTP/1.1" 200 OK
+🚀 Calling external API for: Quick chicken dinner with rice
+❌ API Request failed: HTTPSConnectionPool(host='pantrypilot-llm-885773477836.us-central1.run.app', port=443): Read timed out. (read timeout=30)
+INFO:     127.0.0.1:57961 - "POST /recipes/generate HTTP/1.1" 200 OK
+🚀 Calling external API for: Quick chicken dinner with rice
+❌ API Request failed: HTTPSConnectionPool(host='pantrypilot-llm-885773477836.us-central1.run.app', port=443): Read timed out. (read timeout=30)
+INFO:     127.0.0.1:57964 - "POST /recipes/generate HTTP/1.1" 200 OK
+🚀 Calling external API for: Quick chicken dinner with rice
+INFO:     127.0.0.1:57971 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57975 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57977 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57997 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57998 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57998 - "GET /users/profile HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "GET /users/profile HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57997 - "POST /auth/token HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58005 - "POST /auth/token HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58005 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58005 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58007 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58005 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58007 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58010 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58010 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58010 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58012 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58010 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58012 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58012 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58010 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58010 - "OPTIONS /recipes/generate HTTP/1.1" 200 OK
+🚀 Calling external API for: Healthy lunch (for 2 servings)
+INFO:     127.0.0.1:58010 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58010 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58101 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58106 - "GET /inventory/ HTTP/1.1" 200 OK
+🚀 Calling external API for: Healthy brunch (for 2 servings)
+INFO:     127.0.0.1:58117 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58117 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58260 - "GET /inventory/ HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'routers/recipes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [21400]
+👋 Shutting down...
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:252: FutureWarning: You are using a Python version (3.9.6) past its end of life. Google will update google.api_core with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [24922]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routers/recipes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [24922]
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+🚀 Initializing PantryPilot Backend...
+🔗 Initialized External Model Service: https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe
+✅ Model Service Ready
+👋 Shutting down...
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:252: FutureWarning: You are using a Python version (3.9.6) past its end of life. Google will update google.api_core with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [24975]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routers/recipes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [24975]
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+🚀 Initializing PantryPilot Backend...
+🔗 Initialized External Model Service: https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe
+✅ Model Service Ready
+👋 Shutting down...
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:252: FutureWarning: You are using a Python version (3.9.6) past its end of life. Google will update google.api_core with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [25034]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+🚀 Initializing PantryPilot Backend...
+🔗 Initialized External Model Service: https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe
+✅ Model Service Ready
+INFO:     127.0.0.1:58305 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58305 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58312 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58328 - "POST /recipes/video HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58439 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58440 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58440 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58439 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58439 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58440 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58440 - "OPTIONS /recipes/generate HTTP/1.1" 200 OK
+🚀 Calling external API for: Quick lunch (for 2 servings)
+❌ API Request failed: HTTPSConnectionPool(host='pantrypilot-llm-885773477836.us-central1.run.app', port=443): Read timed out. (read timeout=30)
+INFO:     127.0.0.1:58440 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58440 - "GET /inventory/ HTTP/1.1" 200 OK
+🚀 Calling external API for: Quick lunch (for 2 servings)
+INFO:     127.0.0.1:58453 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58453 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58460 - "OPTIONS /recipes/video HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58460 - "POST /recipes/video HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58467 - "OPTIONS /recipes/7/cooked HTTP/1.1" 200 OK
+🔍 Checking inventory for User 1. Found 3 items.
+  Parsed Ingredient: 1.0 lb 'chicken breast (cut into bite-sized pieces)'
+✅ MATCH (0.50) Deducted 2.00 lb from chicken breast (Was: 2.0, Now: 0)
+  Parsed Ingredient: 2.0 cup 'broccoli florets'
+⚠️ Unit mismatch (cup vs pcs). Fallback deduction: 2 from broccoli
+  Parsed Ingredient: 2.0 cup 'cooked rice'
+⚠️ Unit mismatch (cup vs kg). Fallback deduction: 2 from rice
+INFO:     127.0.0.1:58467 - "POST /recipes/7/cooked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58467 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58485 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58486 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58486 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58485 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58485 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58486 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58486 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58485 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58489 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58489 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58489 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58491 - "GET /inventory/ HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in '.venv/lib/python3.9/site-packages/websockets/sync/utils.py', '.venv/lib/python3.9/site-packages/httpx/_transports/mock.py', '.venv/lib/python3.9/site-packages/~ebsockets/version.py', '.venv/lib/python3.9/site-packages/~ebsockets/legacy/server.py', '.venv/lib/python3.9/site-packages/~ebsockets/asyncio/client.py', '.venv/lib/python3.9/site-packages/~ebsockets/exceptions.py', '.venv/lib/python3.9/site-packages/google/genai/client.py', '.venv/lib/python3.9/site-packages/google/genai/live.py', '.venv/lib/python3.9/site-packages/~ebsockets/frames.py', '.venv/lib/python3.9/site-packages/~ebsockets/protocol.py', '.venv/lib/python3.9/site-packages/google/genai/__init__.py', '.venv/lib/python3.9/site-packages/google/genai/operations.py', '.venv/lib/python3.9/site-packages/httpx/_transports/asgi.py', '.venv/lib/python3.9/site-packages/httpx/_transports/base.py', '.venv/lib/python3.9/site-packages/~ebsockets/client.py', '.venv/lib/python3.9/site-packages/httpcore/_async/http11.py', '.venv/lib/python3.9/site-packages/~ebsockets/legacy/handshake.py', '.venv/lib/python3.9/site-packages/httpx/_urls.py', '.venv/lib/python3.9/site-packages/websockets/legacy/http.py', '.venv/lib/python3.9/site-packages/httpcore/_async/http_proxy.py', '.venv/lib/python3.9/site-packages/httpcore/_sync/interfaces.py', '.venv/lib/python3.9/site-packages/~ebsockets/__init__.py', '.venv/lib/python3.9/site-packages/websockets/http11.py', '.venv/lib/python3.9/site-packages/~ebsockets/sync/client.py', '.venv/lib/python3.9/site-packages/websockets/legacy/auth.py', '.venv/lib/python3.9/site-packages/httpcore/_sync/http11.py', '.venv/lib/python3.9/site-packages/~ebsockets/sync/__init__.py', '.venv/lib/python3.9/site-packages/httpcore/_sync/http_proxy.py', '.venv/lib/python3.9/site-packages/httpcore/_exceptions.py', '.venv/lib/python3.9/site-packages/httpcore/_backends/anyio.py', '.venv/lib/python3.9/site-packages/~ebsockets/asyncio/messages.py', '.venv/lib/python3.9/site-packages/~ebsockets/cli.py', '.venv/lib/python3.9/site-packages/httpcore/_synchronization.py', '.venv/lib/python3.9/site-packages/httpcore/_sync/connection_pool.py', '.venv/lib/python3.9/site-packages/websockets/client.py', '.venv/lib/python3.9/site-packages/httpcore/_async/__init__.py', '.venv/lib/python3.9/site-packages/httpx/_main.py', '.venv/lib/python3.9/site-packages/httpx/_urlparse.py', '.venv/lib/python3.9/site-packages/httpx/_content.py', '.venv/lib/python3.9/site-packages/httpx/_decoders.py', '.venv/lib/python3.9/site-packages/~ebsockets/asyncio/async_timeout.py', '.venv/lib/python3.9/site-packages/google/genai/_transformers.py', '.venv/lib/python3.9/site-packages/websockets/streams.py', '.venv/lib/python3.9/site-packages/websockets/sync/__init__.py', '.venv/lib/python3.9/site-packages/~ebsockets/http.py', '.venv/lib/python3.9/site-packages/httpcore/_sync/socks_proxy.py', '.venv/lib/python3.9/site-packages/~ebsockets/http11.py', '.venv/lib/python3.9/site-packages/httpcore/_backends/mock.py', '.venv/lib/python3.9/site-packages/httpx/_auth.py', '.venv/lib/python3.9/site-packages/~ebsockets/asyncio/compatibility.py', '.venv/lib/python3.9/site-packages/google/genai/_api_client.py', '.venv/lib/python3.9/site-packages/websockets/legacy/server.py', '.venv/lib/python3.9/site-packages/websockets/http.py', '.venv/lib/python3.9/site-packages/httpcore/_async/interfaces.py', '.venv/lib/python3.9/site-packages/websockets/asyncio/client.py', '.venv/lib/python3.9/site-packages/httpcore/_utils.py', '.venv/lib/python3.9/site-packages/httpx/_config.py', '.venv/lib/python3.9/site-packages/~ebsockets/asyncio/router.py', '.venv/lib/python3.9/site-packages/httpx/_exceptions.py', '.venv/lib/python3.9/site-packages/~ebsockets/legacy/exceptions.py', '.venv/lib/python3.9/site-packages/websockets/auth.py', '.venv/lib/python3.9/site-packages/~ebsockets/extensions/base.py', '.venv/lib/python3.9/site-packages/websockets/asyncio/__init__.py', '.venv/lib/python3.9/site-packages/httpcore/_backends/base.py', '.venv/lib/python3.9/site-packages/httpcore/_sync/http2.py', '.venv/lib/python3.9/site-packages/~ebsockets/legacy/protocol.py', '.venv/lib/python3.9/site-packages/google/genai/_test_api_client.py', '.venv/lib/python3.9/site-packages/~ebsockets/streams.py', '.venv/lib/python3.9/site-packages/~ebsockets/asyncio/server.py', '.venv/lib/python3.9/site-packages/websockets/legacy/handshake.py', '.venv/lib/python3.9/site-packages/httpcore/_async/connection_pool.py', '.venv/lib/python3.9/site-packages/httpcore/_sync/connection.py', '.venv/lib/python3.9/site-packages/~ebsockets/legacy/__init__.py', '.venv/lib/python3.9/site-packages/~ebsockets/sync/router.py', '.venv/lib/python3.9/site-packages/websockets/extensions/base.py', '.venv/lib/python3.9/site-packages/httpcore/_api.py', '.venv/lib/python3.9/site-packages/google/genai/_replay_api_client.py', '.venv/lib/python3.9/site-packages/~ebsockets/server.py', '.venv/lib/python3.9/site-packages/google/genai/models.py', '.venv/lib/python3.9/site-packages/httpcore/_async/socks_proxy.py', '.venv/lib/python3.9/site-packages/websockets/sync/client.py', '.venv/lib/python3.9/site-packages/websockets/asyncio/async_timeout.py', '.venv/lib/python3.9/site-packages/~ebsockets/asyncio/connection.py', '.venv/lib/python3.9/site-packages/~ebsockets/sync/messages.py', '.venv/lib/python3.9/site-packages/httpcore/_ssl.py', '.venv/lib/python3.9/site-packages/~ebsockets/auth.py', '.venv/lib/python3.9/site-packages/websockets/imports.py', '.venv/lib/python3.9/site-packages/websockets/datastructures.py', '.venv/lib/python3.9/site-packages/httpx/_utils.py', '.venv/lib/python3.9/site-packages/websockets/typing.py', '.venv/lib/python3.9/site-packages/google/genai/caches.py', '.venv/lib/python3.9/site-packages/websockets/server.py', '.venv/lib/python3.9/site-packages/httpx/_transports/__init__.py', '.venv/lib/python3.9/site-packages/httpcore/_backends/sync.py', '.venv/lib/python3.9/site-packages/google/genai/batches.py', '.venv/lib/python3.9/site-packages/websockets/headers.py', '.venv/lib/python3.9/site-packages/~ebsockets/connection.py', '.venv/lib/python3.9/site-packages/httpx/_multipart.py', '.venv/lib/python3.9/site-packages/httpx/_transports/default.py', '.venv/lib/python3.9/site-packages/google/genai/_common.py', '.venv/lib/python3.9/site-packages/httpcore/__init__.py', '.venv/lib/python3.9/site-packages/websockets/sync/messages.py', '.venv/lib/python3.9/site-packages/httpcore/_async/http2.py', '.venv/lib/python3.9/site-packages/~ebsockets/legacy/framing.py', '.venv/lib/python3.9/site-packages/google/genai/_automatic_function_calling_util.py', '.venv/lib/python3.9/site-packages/websockets/asyncio/compatibility.py', '.venv/lib/python3.9/site-packages/httpcore/_async/connection.py', '.venv/lib/python3.9/site-packages/httpx/_api.py', '.venv/lib/python3.9/site-packages/websockets/connection.py', '.venv/lib/python3.9/site-packages/~ebsockets/legacy/client.py', '.venv/lib/python3.9/site-packages/~ebsockets/__main__.py', '.venv/lib/python3.9/site-packages/websockets/legacy/protocol.py', '.venv/lib/python3.9/site-packages/httpcore/_backends/auto.py', '.venv/lib/python3.9/site-packages/~ebsockets/imports.py', '.venv/lib/python3.9/site-packages/websockets/asyncio/server.py', '.venv/lib/python3.9/site-packages/~ebsockets/datastructures.py', '.venv/lib/python3.9/site-packages/google/genai/_api_module.py', '.venv/lib/python3.9/site-packages/httpx/__version__.py', '.venv/lib/python3.9/site-packages/httpcore/_models.py', '.venv/lib/python3.9/site-packages/google/genai/errors.py', '.venv/lib/python3.9/site-packages/~ebsockets/typing.py', '.venv/lib/python3.9/site-packages/websockets/uri.py', '.venv/lib/python3.9/site-packages/websockets/legacy/__init__.py', '.venv/lib/python3.9/site-packages/websockets/asyncio/messages.py', '.venv/lib/python3.9/site-packages/websockets/utils.py', '.venv/lib/python3.9/site-packages/~ebsockets/headers.py', '.venv/lib/python3.9/site-packages/~ebsockets/sync/server.py', '.venv/lib/python3.9/site-packages/websockets/__main__.py', '.venv/lib/python3.9/site-packages/httpx/_client.py', '.venv/lib/python3.9/site-packages/httpx/__init__.py', '.venv/lib/python3.9/site-packages/~ebsockets/asyncio/__init__.py', '.venv/lib/python3.9/site-packages/httpx/_types.py', '.venv/lib/python3.9/site-packages/~ebsockets/legacy/http.py', '.venv/lib/python3.9/site-packages/websockets/asyncio/connection.py', '.venv/lib/python3.9/site-packages/~ebsockets/extensions/__init__.py', '.venv/lib/python3.9/site-packages/google/genai/chats.py', '.venv/lib/python3.9/site-packages/httpcore/_backends/__init__.py', '.venv/lib/python3.9/site-packages/~ebsockets/legacy/auth.py', '.venv/lib/python3.9/site-packages/websockets/sync/server.py', '.venv/lib/python3.9/site-packages/httpcore/_trace.py', '.venv/lib/python3.9/site-packages/websockets/version.py', '.venv/lib/python3.9/site-packages/~ebsockets/sync/connection.py', '.venv/lib/python3.9/site-packages/websockets/exceptions.py', '.venv/lib/python3.9/site-packages/websockets/frames.py', '.venv/lib/python3.9/site-packages/~ebsockets/uri.py', '.venv/lib/python3.9/site-packages/~ebsockets/extensions/permessage_deflate.py', '.venv/lib/python3.9/site-packages/websockets/extensions/__init__.py', '.venv/lib/python3.9/site-packages/httpx/_transports/wsgi.py', '.venv/lib/python3.9/site-packages/websockets/legacy/framing.py', '.venv/lib/python3.9/site-packages/google/genai/pagers.py', '.venv/lib/python3.9/site-packages/httpx/_models.py', '.venv/lib/python3.9/site-packages/~ebsockets/utils.py', '.venv/lib/python3.9/site-packages/websockets/legacy/exceptions.py', '.venv/lib/python3.9/site-packages/websockets/protocol.py', '.venv/lib/python3.9/site-packages/~ebsockets/sync/utils.py', '.venv/lib/python3.9/site-packages/google/genai/types.py', '.venv/lib/python3.9/site-packages/google/genai/files.py', '.venv/lib/python3.9/site-packages/websockets/sync/connection.py', '.venv/lib/python3.9/site-packages/websockets/__init__.py', '.venv/lib/python3.9/site-packages/httpx/_status_codes.py', '.venv/lib/python3.9/site-packages/websockets/legacy/client.py', '.venv/lib/python3.9/site-packages/httpcore/_sync/__init__.py', '.venv/lib/python3.9/site-packages/google/genai/tunings.py', '.venv/lib/python3.9/site-packages/websockets/extensions/permessage_deflate.py', '.venv/lib/python3.9/site-packages/google/genai/version.py', '.venv/lib/python3.9/site-packages/httpcore/_backends/trio.py', '.venv/lib/python3.9/site-packages/google/genai/_extra_utils.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [25034]
+👋 Shutting down...
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:252: FutureWarning: You are using a Python version (3.9.6) past its end of life. Google will update google.api_core with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [28009]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+🚀 Initializing PantryPilot Backend...
+🔗 Initialized External Model Service: https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe
+✅ Model Service Ready
+INFO:     127.0.0.1:58585 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58586 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58586 - "GET /users/profile HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58585 - "GET /users/profile HTTP/1.1" 401 Unauthorized
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [28009]
+👋 Shutting down...
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:252: FutureWarning: You are using a Python version (3.9.6) past its end of life. Google will update google.api_core with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [49278]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+🚀 Initializing PantryPilot Backend...
+🔗 Initialized External Model Service: https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe
+✅ Model Service Ready
+INFO:     127.0.0.1:49975 - "POST /auth/token HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49975 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49975 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49975 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49977 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49975 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49977 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49977 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49975 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49975 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49977 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49980 - "OPTIONS /inventory/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49980 - "POST /inventory/upload HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'routers/inventory.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [49278]
+👋 Shutting down...
+/Users/DELL/PantryPilot-1/model_deployment/backend/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [54902]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+🚀 Initializing PantryPilot Backend...
+🔗 Initialized External Model Service: https://pantrypilot-llm-885773477836.us-central1.run.app/api/generate-recipe
+✅ Model Service Ready
+INFO:     127.0.0.1:50010 - "OPTIONS /inventory/confirm_upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50010 - "POST /inventory/confirm_upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50010 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50010 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50010 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50012 - "OPTIONS /recipes/generate HTTP/1.1" 200 OK
+🚀 Calling external API for: A quick healthy brunch (for 1 servings)
+❌ API Request failed: HTTPSConnectionPool(host='pantrypilot-llm-885773477836.us-central1.run.app', port=443): Read timed out. (read timeout=30)
+INFO:     127.0.0.1:50012 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50012 - "GET /inventory/ HTTP/1.1" 200 OK
+🚀 Calling external API for: A quick healthy brunch (for 1 servings)
+❌ API Request failed: HTTPSConnectionPool(host='pantrypilot-llm-885773477836.us-central1.run.app', port=443): Read timed out. (read timeout=30)
+INFO:     127.0.0.1:50178 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50178 - "GET /inventory/ HTTP/1.1" 200 OK
+🚀 Calling external API for: A quick healthy brunch (for 1 servings)
+INFO:     127.0.0.1:50189 - "POST /recipes/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50189 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50189 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50196 - "OPTIONS /recipes/video HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50196 - "POST /recipes/video HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "OPTIONS /recipes/10/cooked HTTP/1.1" 200 OK
+🔍 Checking inventory for User 1. Found 20 items.
+  Parsed Ingredient: 1.0 cup 'Thick Rolled Oats'
+⚠️ Unit mismatch (cup vs oz). Fallback deduction: 1 from Thick Rolled Oats
+  Parsed Ingredient: 0.5 cup 'Non-Fat Vanilla Greek Yogurt'
+⚠️ Unit mismatch (cup vs oz). Fallback deduction: 1 from Non-Fat Vanilla Greek Yogurt
+  Parsed Ingredient: 0.5 cup 'sliced Banana'
+⚠️ Unit mismatch (cup vs lbs). Fallback deduction: 1 from Banana
+  Parsed Ingredient: 2.0 tbsp 'Almond Butter'
+⚠️ Unit mismatch (tbsp vs lb). Fallback deduction: 1 from Almond Butter
+  Parsed Ingredient: 0.25 cup 'Strawberry Spread'
+⚠️ Unit mismatch (cup vs oz). Fallback deduction: 1 from Strawberry Spread
+  Parsed Ingredient: 0.25 cup 'sliced Blackberries'
+⚠️ Unit mismatch (cup vs oz). Fallback deduction: 1 from Blackberries
+INFO:     127.0.0.1:50386 - "POST /recipes/10/cooked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "OPTIONS /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "OPTIONS /recipes/10/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "POST /recipes/10/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50389 - "OPTIONS /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50389 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "GET /recipes/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50389 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50389 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "GET /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50386 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50389 - "GET /inventory/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50574 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50575 - "OPTIONS /users/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50575 - "GET /users/profile HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50574 - "GET /users/profile HTTP/1.1" 401 Unauthorized

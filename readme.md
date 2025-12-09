@@ -2,6 +2,12 @@
 
 **Group 16 · Personalized Grocery Forecasting & Constraint-Aware Recipe Assistant**
 
+![Tests](https://github.com/abhikothari091/PantryPilot/workflows/Tests/badge.svg)
+[![codecov](https://codecov.io/gh/abhikothari091/PantryPilot/branch/main/graph/badge.svg)](https://codecov.io/gh/abhikothari091/PantryPilot)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![React](https://img.shields.io/badge/react-19.2-blue)
+![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen)
+
 ---
 
 ## 📘 High-Level Overview
@@ -278,16 +284,13 @@ airflow dags test pantrypilot_data_pipeline 2025-01-01
 ```
 PantryPilot/
 ├── data_pipeline/                      # Main data pipeline
-│   ├── airflow/
-│   │   └── dags/
-│   │       └── pantry_pilot_dag.py
+│   ├── airflow/dags/pantry_pilot_dag.py
 │   ├── data/
 │   │   ├── alerts/
 │   │   ├── processed/
 │   │   ├── raw/
 │   │   ├── receipts/
-│   │   ├── scripts/
-│   │   │   └── synthetic_generate.py
+│   │   ├── scripts/synthetic_generate.py
 │   │   └── synthetic_data/
 │   ├── great_expectations/
 │   ├── reports/
@@ -306,8 +309,45 @@ PantryPilot/
 │   ├── requirements.txt
 │   └── dvc.yaml
 │
-├── model_development/                  # Model dev & evaluation
-│   ├── training_pipeline/             # Recipe training data generation (teammate 2)
+├── model_deployment/                   # Web app (frontend + backend)
+│   ├── README.md                       # Detailed deployment guide
+│   ├── backend/
+│   │   ├── auth_utils.py
+│   │   ├── database.py
+│   │   ├── main.py
+│   │   ├── model_service.py            # External LLM API client (strict dietary enforcement)
+│   │   ├── models.py                   # User, UserProfile, InventoryItem, RecipeHistory, RecipePreference
+│   │   ├── requirements.txt
+│   │   ├── routers/
+│   │   │   ├── auth.py
+│   │   │   ├── inventory.py
+│   │   │   ├── recipes.py              # Recipe gen, DPO comparison, feedback, history
+│   │   │   ├── users.py
+│   │   │   └── admin.py                # Admin dashboard metrics
+│   │   └── utils/smart_inventory.py
+│   ├── frontend/
+│   │   ├── public/logo.png             # Favicon/logo
+│   │   ├── index.html                  # Uses logo.png + title
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── api/axios.js
+│   │       ├── assets/
+│   │       ├── components/
+│   │       │   ├── Layout.jsx          # Main layout with sidebar
+│   │       │   ├── AppTour.jsx         # Interactive onboarding tour (react-joyride)
+│   │       │   ├── AppTour.css         # Tour styling (glassmorphism)
+│   │       │   ├── Toast.jsx           # Toast notifications
+│   │       │   └── Skeleton.jsx        # Loading skeletons
+│   │       ├── context/
+│   │       ├── pages/                  # Dashboard, RecipeGenerator, Profile, History, Login, Signup, AdminDashboard
+│   │       ├── App.jsx
+│   │       ├── main.jsx
+│   │       ├── App.css
+│   │       └── index.css
+│   └── model_weights/                  # LoRA adapters (if used locally)
+│
+├── model_development/                  # Model development & eval
+│   ├── training_pipeline/
 │   │   ├── 01_synthetic_generation/
 │   │   │   ├── generate_synthetic_recipes_groq.py
 │   │   │   ├── SCENARIOS.md
@@ -323,40 +363,18 @@ PantryPilot/
 │   │   │   ├── lambda_finetune_llama3b.ipynb
 │   │   │   ├── lora_config_v3.yaml
 │   │   │   └── LAMBDA_LABS_SETUP_GUIDE.md
-│   │   └── data/                      # Training data (from GCS)
-│   │       ├── synthetic/
-│   │       ├── chat_format/
-│   │       └── cleaned/
+│   │   └── data/ (synthetic/chat_format/cleaned)
 │   ├── llm_eval/
-│   │   ├── __init__.py
-│   │   ├── config.py
-│   │   ├── datasets.py
-│   │   ├── metrics.py
-│   │   ├── run_eval.py
-│   │   ├── bias_eval.py
-│   │   ├── analyze_results.py
-│   │   ├── data/
-│   │   │   ├── recipes_test.jsonl      # Synthetic eval set from teammate 2
-│   │   │   └── val_bias.json           # Hand-crafted bias prompts
-│   │   └── reports/
-│   │       ├── eval_*.json
-│   │       ├── eval_summary_*.csv
-│   │       └── bias_report.csv
-│   └── models/                         # NOT tracked by git (see .gitignore)
-│       └── llama3b_lambda_lora/        # LoRA adapter (local, from GCS)
-│   └── ocr-api/                        # Main folder for OCR service
-│       ├── Dockerfile                   # Dockerfile for building the container
-│       └── app/                         # Application code
-│           ├── main.py                  # FastAPI entrypoint
-│           ├── receipt_extractor.py     # Receipt extraction functions
-│           └── tests/                   # Folder of receipt images for testing
+│   │   ├── config.py, datasets.py, metrics.py, run_eval.py, bias_eval.py, analyze_results.py
+│   │   ├── data/ (recipes_test.jsonl, val_bias.json)
+│   │   └── reports/ (eval_*.json, eval_summary_*.csv, bias_report.csv)
+│   ├── models/ (gitignored; LoRA adapters)
+│   └── ocr/ (scan_receipts.py, ocr_evaluation.ipynb, test_receipts/)
 │
 ├── DataCard/                           # Data & model documentation
-├── docs/                               # Global docs (slides, notes, etc.)
-├── .github/
-│   └── workflows/
-│       └── pantrypilot_ci.yml          # CI pipeline (tests + smoke eval)
-├── .dvc/                               # DVC configuration
+├── docs/                               # Slides/notes
+├── .github/workflows/pantrypilot_ci.yml# CI
+├── .dvc/                               # DVC config
 └── .gitignore                          # Includes model_development/models/
 ```
 
@@ -953,6 +971,35 @@ This is mainly used to copy tables / summaries into the final report and slides.
 
 ---
 
+## 🍳 PantryPilot Web Application
+
+Full-stack deployment of PantryPilot (React/Vite frontend + FastAPI backend + Postgres/Neon). Deployed on Render as separate services (backend Web Service, frontend Static Site). Additionally, a specialized `cr_backend` service is deployed to Google Cloud Run, hosting the finetuned LLM for scalable recipe generation. Highlights:
+
+- **Auth + profiles (JWT)**, inventory CRUD with OCR upload/confirmation, recipe generation via external model API, recipe history, "cooked" deduction with unit conversion, optional video generation (mock by default).
+- **Admin Dashboard**: View application metrics (user count, recipe stats, inventory analytics, feedback distribution). Admin-only access.
+- **Interactive Onboarding Tour**: Built with react-joyride. Users can click "Start Tour" in the sidebar to get a guided walkthrough of app features (Dashboard, Recipes, History, Profile).
+- **DPO Comparison Flow**: Every 7th recipe generation shows two variants side-by-side. Users choose A or B, collecting preference data for future model fine-tuning.
+- **Slack Retraining Alerts**: When a user reaches 50 preferences, a Slack notification is automatically sent to admins with an "Approve Retraining" button. Requires `SLACK_WEBHOOK_URL` env var.
+- **Strict Dietary Restrictions**: Backend enforces dietary preferences (vegetarian, vegan, gluten-free, etc.) with explicit prompts to the LLM. Allergies are marked as "life-threatening" to ensure compliance.
+- Configurable CORS via `FRONTEND_ORIGIN`; frontend targets backend via `VITE_API_BASE_URL`.
+- Environment vars: `DATABASE_URL`, `SECRET_KEY`, `SLACK_WEBHOOK_URL` (optional), video toggles.
+- Deploy steps (Render reference):
+  - Backend root `model_deployment/backend`: build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, set envs (`DATABASE_URL`, `SECRET_KEY`, `FRONTEND_ORIGIN`, `SLACK_WEBHOOK_URL`, `VIDEO_GEN_ENABLED=false`).
+  - Frontend root `model_deployment/frontend`: build `npm install && npm run build`, publish `dist`, env `VITE_API_BASE_URL=https://<backend>`.
+
+### Cloud Run Deployment (Finetuned LLM)
+
+For scalable and efficient inference of the finetuned Large Language Model (LLM), a dedicated service is deployed to Google Cloud Run. This service, found in `model_deployment/cr_backend/`, is optimized for LLM inference, providing quick and cost-effective recipe generation.
+
+- **Purpose**: Hosts the fine-tuned LLM for recipe generation, ensuring high availability and scalability.
+- **Technology**: FastAPI application containerized with Docker, deployed on Google Cloud Run.
+- Automated Deployment: Deployment to Cloud Run is automated via a GitHub Actions workflow (`.github/workflows/deploy_llm.yml`).
+- Details: For comprehensive setup, build, and environment variable configurations, refer to the [model_deployment/README.md](model_deployment/README.md).
+
+- Detailed documentation, flow diagrams, API list, and data model: see [model_deployment/README.md](model_deployment/README.md).
+
+---
+
 ## 🔁 CI / Testing
 
 We use a simple GitHub Actions workflow (e.g. `.github/workflows/pantrypilot_ci.yml`) to run basic checks on every push / PR.
@@ -1015,5 +1062,6 @@ From a full MLOps perspective, this project demonstrates:
 - CI hooks to prevent obvious regressions in both pipeline and model evaluation code
 
 Overall, PantryPilot moves from synthetic inventory data → clean, validated tables → LLM-based recipe generation with measured behavior across multiple user segments. That matches the course goal: not just training a model, but integrating it into a reproducible, observable, and evaluable system.
+
 
 

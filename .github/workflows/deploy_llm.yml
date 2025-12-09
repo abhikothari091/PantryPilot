@@ -1,0 +1,59 @@
+name: Deploy to Cloud Run GPU
+
+on:
+  push:
+    branches: ["main", "test-llm-deployment"]
+    paths:
+      - 'model_deployment/cr_backend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Authenticate to Google Cloud
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ultimate-bit-478920-i7
+
+    - name: Configure Docker for Artifact Registry
+      run: gcloud auth configure-docker us-central1-docker.pkg.dev
+
+    - name: Download LoRA from GCS
+      run: |
+        mkdir -p model_deployment/cr_backend/models
+
+    - name: Build Docker image
+      run: |
+        docker build -t us-central1-docker.pkg.dev/ultimate-bit-478920-i7/pantrypilot/pantrypilot-llm:latest model_deployment/cr_backend
+
+    - name: Push Docker image
+      run: |
+        docker push us-central1-docker.pkg.dev/ultimate-bit-478920-i7/pantrypilot/pantrypilot-llm:latest
+
+    - name: Deploy to Cloud Run GPU
+      run: |
+        gcloud run deploy pantrypilot-llm-v2 \
+          --image=us-central1-docker.pkg.dev/ultimate-bit-478920-i7/pantrypilot/pantrypilot-llm:latest \
+          --region=us-central1 \
+          --platform=managed \
+          --allow-unauthenticated \
+          --cpu=4 \
+          --memory=16Gi \
+          --gpu=1 \
+          --gpu-type=nvidia-l4 \
+          --timeout=900 \
+          --port=7860 \
+          --min-instances=0 \
+          --max-instances=1 \
+          --no-gpu-zonal-redundancy \
+          --set-env-vars=HF_TOKEN=${{ secrets.HF_TOKEN }}

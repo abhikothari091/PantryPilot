@@ -8,6 +8,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from pathlib import Path
 from typing import List, Dict, Optional
+import os
 
 
 class ModelService:
@@ -26,23 +27,32 @@ class ModelService:
         print(f"🖥️  Using device: {self.device}")
         print(f"📥 Loading base model: {base_model_id}")
 
-        # Load tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(base_model_id)
+        # Load tokenizer from local base model folder
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.base_model_id,
+            token=os.environ.get("HF_TOKEN")
+        )
+
+        # fp16 only for GPU, fp32 otherwise
+        use_fp16 = (self.device == "cuda")
+        dtype = torch.float16 if use_fp16 else torch.float32
 
         # Load base model
         self.base_model = AutoModelForCausalLM.from_pretrained(
-            base_model_id,
-            torch_dtype=torch.float16,
-        ).to(self.device) # Explicitly move to device
+            self.base_model_id,
+            torch_dtype=dtype,
+            low_cpu_mem_usage=True,
+            token=os.environ.get("HF_TOKEN")
+        ).to(self.device)
 
-        print(f"✅ Base model loaded (~6GB memory)")
+        print(f"✅ Base model loaded")
 
-        # Load fine-tuned model with LoRA adapter
+        # Load LoRA adapter
         if Path(adapter_path).exists():
             print(f"📥 Loading LoRA adapter: {adapter_path}")
             self.finetuned_model = PeftModel.from_pretrained(self.base_model, adapter_path)
             self.finetuned_model.eval()
-            print(f"✅ Fine-tuned model loaded (base + 35MB adapter)")
+            print(f"✅ Fine-tuned model loaded")
         else:
             print(f"⚠️  LoRA adapter not found at {adapter_path}")
             self.finetuned_model = None

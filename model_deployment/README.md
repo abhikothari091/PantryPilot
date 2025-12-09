@@ -232,6 +232,7 @@ Backend (Web Service)
 - Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 - Env: `DATABASE_URL`, `SECRET_KEY`, `FRONTEND_ORIGIN=https://<frontend>`, `VIDEO_GEN_ENABLED=false` (keep off unless using Veo)
 - Python: set `PYTHON_VERSION=3.11.9`
+- Note: Deployments are performed manually (e.g., via Render) because each user will eventually have their own DPO model trained manually due to cost considerations; no shared auto-deploy/CD is configured.
 
 Frontend (Static Site)
 - Root: `model_deployment/frontend`

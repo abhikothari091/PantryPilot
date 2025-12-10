@@ -321,7 +321,7 @@ def choose_preference(
     satisfaction_ratio = liked_count / total_with_feedback if total_with_feedback > 0 else 1.0
     
     # Send notification if threshold reached (50 preferences)
-    from services.notification_service import check_and_notify_threshold
+    from services.notification_service import check_and_notify_threshold, check_consecutive_dislikes
     import os
     base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
     check_and_notify_threshold(
@@ -375,6 +375,11 @@ def submit_feedback(
     
     entry.feedback_score = body.score
     db.commit()
+
+    # Check for consecutive dislikes
+    if body.score == 1:  # Only check if the feedback was a dislike
+        check_consecutive_dislikes(user_id=current_user.id, db=db)
+
     return {"status": "success"}
 
 @router.post("/{recipe_id}/cooked")

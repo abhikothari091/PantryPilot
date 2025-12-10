@@ -979,7 +979,8 @@ Full-stack deployment of PantryPilot (React/Vite frontend + FastAPI backend + Po
 - **Admin Dashboard**: View application metrics (user count, recipe stats, inventory analytics, feedback distribution). Admin-only access.
 - **Interactive Onboarding Tour**: Built with react-joyride. Users can click "Start Tour" in the sidebar to get a guided walkthrough of app features (Dashboard, Recipes, History, Profile).
 - **DPO Comparison Flow**: Every 7th recipe generation shows two variants side-by-side. Users choose A or B, collecting preference data for future model fine-tuning.
-- **Slack Retraining Alerts**: When a user reaches 50 preferences, a Slack notification is automatically sent to admins with an "Approve Retraining" button. Requires `SLACK_WEBHOOK_URL` env var.
+- **Slack Retraining Alerts**: A Slack notification fires only when a user has ≥50 preference choices, ≥50 feedback ratings, and a satisfaction ratio below 70%, and includes the satisfaction metric inside the block. Each alert is recorded in `retraining_notifications` (to avoid duplicates) and links admins to `/training/approve/{user_id}`.
+  - Clicking "Approve Retraining" now calls the backend's `training_service.trigger_dpo_training` helper, which logs a training job ID, marks the notification as approved/training-started, and returns job metadata so the pipeline can continue with data export → DPO formatting → Lambda/Cloud Run training as a next step.
 - **Strict Dietary Restrictions**: Backend enforces dietary preferences (vegetarian, vegan, gluten-free, etc.) with explicit prompts to the LLM. Allergies are marked as "life-threatening" to ensure compliance.
 - Configurable CORS via `FRONTEND_ORIGIN`; frontend targets backend via `VITE_API_BASE_URL`.
 - Environment vars: `DATABASE_URL`, `SECRET_KEY`, `SLACK_WEBHOOK_URL` (optional), video toggles.

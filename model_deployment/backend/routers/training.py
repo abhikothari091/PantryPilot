@@ -9,8 +9,7 @@ from typing import List
 
 from database import get_db
 from dependencies import get_current_user
-from models import User, UserProfile, RecipePreference, RetrainingNotification
-from services.training_service import trigger_dpo_training
+from models import User, UserProfile, RecipePreference
 
 router = APIRouter(prefix="/training", tags=["training"])
 
@@ -106,26 +105,8 @@ def approve_retraining(
     
     print(f"[TRAINING] Approved retraining for user {user.username} (ID: {user_id})")
     print(f"[TRAINING] Preference count: {preference_count}")
+    print(f"[TRAINING] Run: python train_dpo_persona.py --user_id {user_id}")
     
-    training_job = trigger_dpo_training(user_id, user.username)
-    print(f"[TRAINING] Triggered job {training_job['id']} (status={training_job['status']})")
-
-    notification_entry = db.query(RetrainingNotification).filter(
-        RetrainingNotification.user_id == user_id,
-        RetrainingNotification.training_started == False
-    ).order_by(RetrainingNotification.id.desc()).first()
-
-    if notification_entry:
-        notification_entry.approved = True
-        notification_entry.training_started = True
-        db.commit()
-
-    approval_log.update({
-        "training_job_id": training_job["id"],
-        "training_status": training_job["status"],
-        "training_started_at": training_job["started_at"]
-    })
-
     return approval_log
 
 

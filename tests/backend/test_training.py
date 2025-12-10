@@ -3,10 +3,11 @@ Tests for training router and notification service.
 """
 
 import pytest
+from datetime import datetime
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from unittest.mock import patch, MagicMock
-from models import User, RecipePreference
+from models import User, RecipePreference, RetrainingNotification
 from auth_utils import get_password_hash, create_access_token
 
 
@@ -61,6 +62,76 @@ def test_approve_retraining_insufficient_preferences(client: TestClient, test_db
     response = client.post(f"/training/approve/{user.id}")
     assert response.status_code == 400
     assert "Minimum 50 required" in response.json()["detail"]
+
+
+def test_approve_retraining_triggers_training_job(client: TestClient, test_db: Session):
+    """Approving retraining triggers the training service and updates notification."""
+    # Create admin
+    admin = User(
+        username="admin",
+        email="admin@example.com",
+        hashed_password=get_password_hash("adminpass")
+    )
+    test_db.add(admin)
+    test_db.commit()
+
+    token = create_access_token(data={"sub": "admin"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create target user with 50 preferences
+    user = User(
+        username="train_user",
+        email="train@example.com",
+        hashed_password=get_password_hash("pass123")
+    )
+    test_db.add(user)
+    test_db.commit()
+    test_db.refresh(user)
+
+    preferences = [
+        RecipePreference(
+            user_id=user.id,
+            prompt=f"prompt {i}",
+            variant_a={"name": "A"},
+            variant_b={"name": "B"},
+            skipped=False
+        )
+        for i in range(50)
+    ]
+    test_db.add_all(preferences)
+    test_db.commit()
+
+    notification = RetrainingNotification(
+        user_id=user.id,
+        preference_count=50,
+        satisfaction_ratio=0.45,
+        training_started=False
+    )
+    test_db.add(notification)
+    test_db.commit()
+
+    job_payload = {
+        "id": f"job-{user.id}",
+        "status": "training_started",
+        "user_id": user.id,
+        "started_at": datetime.utcnow().isoformat()
+    }
+
+    with patch('routers.training.trigger_dpo_training') as mock_trigger:
+        mock_trigger.return_value = job_payload
+
+        response = client.post(f"/training/approve/{user.id}", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["training_job_id"] == job_payload["id"]
+    assert data["training_status"] == job_payload["status"]
+
+    updated_notification = test_db.query(RetrainingNotification).filter(
+        RetrainingNotification.user_id == user.id
+    ).first()
+    assert updated_notification.training_started is True
+    assert updated_notification.approved is True
 
 
 def test_export_requires_admin(client: TestClient, test_user, auth_headers):

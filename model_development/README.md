@@ -43,10 +43,13 @@ model_development/
   │   ├── reports/                             # eval_*.json, eval_summary_*.csv, bias_report.csv
   │   └── __init__.py
   │
-  ├── ocr/                                     # Receipt OCR experiments
-  │   ├── scan_receipts.py                     # Calls OCR / VLM on sample receipts
-  │   ├── ocr_evaluation.ipynb                 # Manual evaluation notebook
-  │   └── test_receipts/                       # Sample receipt images
+  ├── ocr-api/                                # Receipt OCR service
+  │   ├── Dockerfile                           # Dockerfile for container
+  │   ├── requirements.txt                     # Python dependencies
+  │   └── app/                                 # Application code
+  │       ├── main.py                          # FastAPI entrypoint
+  │       ├── receipt_extractor.py             # Receipt extraction functions
+  │       └── tests/                           # Sample receipt images for testing
   │
   ├── reward_model/                            # Preference reward model (ranking recipes)
   │   ├── reward_model.py                      # Model architecture + scoring
@@ -642,54 +645,57 @@ The model development README (this file) serves as the source of truth for:
 
 ## 9. OCR
 
-The ocr folder contains tools for extracting grocery items from receipt images using Google's Gemini vision model.
+The `ocr-api` folder contains tools for extracting grocery items from receipt images using Google's Gemini vision model. The core function `extract_from_bytes(img_bytes)` in `app/receipt_extractor.py` uses the Gemini 2.5 Flash model for vision-based OCR. It takes a receipt image as bytes (from a file upload or local image) and returns a structured JSON array of extracted grocery items with metadata.
 
-#### 9.1.1 Receipt Scanning Function
-scan_receipts.py provides the core extract_receipt_items(img_path) function that:
+### 9.1.1 Prompt and Schema
 
-- Uses Google Gemini 2.5 Flash model for vision-based OCR
-- Takes a local image path as input
-- Returns a JSON array of extracted grocery items
-
-#### 9.1.2 Prompt Design
-The function uses a strict prompt that:
-
-- Instructs the model to extract only food/grocery items from the receipt
-- Enforces JSON-only output with no explanatory text
-- Specifies the exact schema:
+The function sends a prompt to the model instructing it to extract only food or grocery items and return JSON-only output. The expected schema includes the item name, quantity, category, and purchase date:
 
 ```json
 [
   {
     "item": "item name",
-    "quantity": "quantity (oz, lbs, etc.)"
+    "quantity": "quantity (oz, lbs, etc.)",
+    "category": "one of ['protein','condiments_spices','canned','snacks','produce','dairy','grain','others']",
+    "purchase_date": "YYYY-MM-DD"
   }
 ]
 ```
 
-Includes normalization rules:
+Additional rules applied by the function include removing brand names from item names, estimating quantities when not provided, categorizing items into predefined categories, and automatically adding a `purchase_date` field set to the current date.
 
-- Remove brand names from item names
-- Estimate quantities in appropriate units if not provided on receipt
+### 9.1.2 Response Handling
 
-#### 9.1.3 Response Parsing
-The function handles Gemini's response format by:
+After receiving the model's response, the function strips any markdown JSON code fences, parses the cleaned text as JSON, and ensures each item includes `item`, `quantity`, `category`, and `purchase_date`.
 
-- Stripping markdown JSON code fences (```json ... ```) if present
-- Parsing the cleaned text as JSON
-- Returning the structured item list
+### 9.1.3 FastAPI Endpoint
 
-### 9.2 Evaluation Notebook
-ocr_evaluation.ipynb provides a batch testing workflow:
+`app/main.py` exposes two API endpoints: `GET /health` for a simple status check, and `POST /extract`, which accepts an uploaded image file, reads its bytes, calls `extract_from_bytes()`, and returns structured JSON with the extracted items. Example response:
 
-- Iterates through all images (.png, .jpg, .jpeg) in the test_receipts/ folder
-- Displays each receipt image inline
-- Calls extract_receipt_items() for each image
-- Collects results in all_receipts_items dictionary keyed by filename
-- Prints extracted items in human-readable format
+```json
+{
+  "status": "ok",
+  "items": [
+    {
+      "item": "banana",
+      "quantity": "3 pcs",
+      "category": "produce",
+      "purchase_date": "2025-11-24"
+    },
+    {
+      "item": "cheddar cheese",
+      "quantity": "8 oz",
+      "category": "dairy",
+      "purchase_date": "2025-11-24"
+    }
+  ]
+}
+```
 
-### 9.3 Test Data
-The test_receipts/ folder contains evaluation images for validating OCR accuracy and robustness.
+### 9.2 Test Data
+
+The `tests/` folder contains evaluation images for validating OCR accuracy and robustness. These images are used for local testing or batch evaluation to ensure the OCR extraction performs correctly and consistently across different receipt formats.
+
 
 --- 
 

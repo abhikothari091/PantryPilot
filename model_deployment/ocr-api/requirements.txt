@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pillow
+psycopg2-binary
+python-multipart
+google-generativeai>=0.3.0

@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from models import RetrainingNotification, User, RecipeHistory
+from models import RetrainingNotification
 
 # Configuration
 PREFERENCE_THRESHOLD = 50
@@ -165,97 +165,3 @@ def check_and_notify_threshold(
     db.commit()
 
     return sent
-
-
-def send_consecutive_dislikes_alert(user_id: int, username: str, dislike_count: int) -> bool:
-    """
-    Send a Slack alert when a user has 10 consecutive dislikes.
-    """
-    webhook_url = os.getenv("SLACK_WEBHOOK_URL")
-    if not webhook_url:
-        print(f"[ALERT] User {username} (ID: {user_id}) has {dislike_count} consecutive dislikes.")
-        return False
-
-    message = {
-        "blocks": [
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": "📉 User Satisfaction Alert",
-                    "emoji": True,
-                },
-            },
-            {
-                "type": "section",
-                "fields": [
-                    {"type": "mrkdwn", "text": f"*User:*\n{username}"},
-                    {"type": "mrkdwn", "text": f"*User ID:*\n{user_id}"},
-                    {"type": "mrkdwn", "text": f"*Consecutive Dislikes:*\n{dislike_count}"},
-                    {
-                        "type": "mrkdwn",
-                        "text": f"*Time:*\n{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
-                    },
-                ],
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"User *{username}* has expressed dissatisfaction with the last *{dislike_count}* generated recipes. This may indicate a problem with the model's performance for this user.",
-                },
-            },
-        ]
-    }
-
-    try:
-        response = requests.post(webhook_url, json=message, timeout=10)
-        if response.status_code == 200:
-            print(f"[SLACK] Consecutive dislikes alert sent for user {username} (ID: {user_id})")
-            return True
-        else:
-            print(f"[SLACK] Failed to send dislike alert: {response.status_code} - {response.text}")
-            return False
-    except Exception as e:
-        print(f"[SLACK] Error sending dislike alert: {e}")
-        return False
-
-
-def check_consecutive_dislikes(user_id: int, db: Session):
-    """
-    Checks if a user has 10 consecutive dislikes and sends an alert.
-    """
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        return
-
-    # A dislike is represented by a feedback_score of 1
-    dislike_score = 1
-    consecutive_dislikes_threshold = 10
-
-    recent_feedback = (
-        db.query(RecipeHistory)
-        .filter(RecipeHistory.user_id == user_id, RecipeHistory.feedback_score != 0)
-        .order_by(RecipeHistory.created_at.desc())
-        .limit(consecutive_dislikes_threshold)
-        .all()
-    )
-
-    if len(recent_feedback) < consecutive_dislikes_threshold:
-        return
-
-    consecutive_dislikes = True
-    for feedback in recent_feedback:
-        if feedback.feedback_score != dislike_score:
-            consecutive_dislikes = False
-            break
-
-    if consecutive_dislikes:
-        # To prevent spamming, we could add a check here to see
-        # if this alert was already sent recently. For now, we'll send it.
-        print(f"User {user.username} has {consecutive_dislikes_threshold} consecutive dislikes. Sending alert.")
-        send_consecutive_dislikes_alert(
-            user_id=user.id,
-            username=user.username,
-            dislike_count=consecutive_dislikes_threshold,
-        )

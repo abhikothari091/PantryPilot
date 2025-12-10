@@ -7,7 +7,7 @@ on:
 
 jobs:
   daily-health:
-    if: ${{ vars.ENABLE_DAILY_HEALTH == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.ENABLE_DAILY_HEALTH == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

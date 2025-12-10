@@ -130,13 +130,14 @@ def test_notification_service_no_webhook():
             user_id=1,
             username="testuser",
             preference_count=50,
-            approval_url="http://test.com/approve/1"
+            approval_url="http://test.com/approve/1",
+            satisfaction_ratio=0.42
         )
     
     assert result == False
 
 
-def test_notification_threshold_not_reached():
+def test_notification_threshold_not_reached(test_db: Session):
     """No notification sent if threshold not reached."""
     from services.notification_service import check_and_notify_threshold
     
@@ -144,14 +145,17 @@ def test_notification_threshold_not_reached():
         user_id=1,
         username="testuser",
         preference_count=49,
+        satisfaction_ratio=0.10,
+        feedback_count=60,
+        db=test_db,
         base_url="http://localhost:8000"
     )
     
     assert result is None
 
 
-def test_notification_threshold_reached():
-    """Notification triggered when threshold reached."""
+def test_notification_threshold_reached(test_db: Session):
+    """Notification triggered when threshold and satisfaction conditions met."""
     from services.notification_service import check_and_notify_threshold
     
     with patch('services.notification_service.send_slack_alert') as mock_send:
@@ -161,11 +165,31 @@ def test_notification_threshold_reached():
             user_id=1,
             username="testuser",
             preference_count=50,
+            satisfaction_ratio=0.60,
+            feedback_count=80,
+            db=test_db,
             base_url="http://localhost:8000"
         )
     
     assert result == True
     mock_send.assert_called_once()
+
+
+def test_notification_high_satisfaction_skips(test_db: Session):
+    """No notification when satisfaction above threshold even if count met."""
+    from services.notification_service import check_and_notify_threshold
+
+    result = check_and_notify_threshold(
+        user_id=1,
+        username="testuser",
+        preference_count=120,
+        satisfaction_ratio=0.85,
+        feedback_count=120,
+        db=test_db,
+        base_url="http://localhost:8000"
+    )
+
+    assert result is None
 
 
 def test_slack_alert_success():
@@ -182,7 +206,8 @@ def test_slack_alert_success():
                 user_id=1,
                 username="testuser",
                 preference_count=50,
-                approval_url="http://test.com/approve/1"
+                approval_url="http://test.com/approve/1",
+                satisfaction_ratio=0.55
             )
     
     assert result == True

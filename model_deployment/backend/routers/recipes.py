@@ -307,6 +307,18 @@ def choose_preference(
         RecipePreference.skipped == False,
         RecipePreference.chosen_variant != None
     ).count()
+
+    total_with_feedback = db.query(RecipeHistory).filter(
+        RecipeHistory.user_id == current_user.id,
+        RecipeHistory.feedback_score > 0
+    ).count()
+
+    liked_count = db.query(RecipeHistory).filter(
+        RecipeHistory.user_id == current_user.id,
+        RecipeHistory.feedback_score == 2
+    ).count()
+
+    satisfaction_ratio = liked_count / total_with_feedback if total_with_feedback > 0 else 1.0
     
     # Send notification if threshold reached (50 preferences)
     from services.notification_service import check_and_notify_threshold
@@ -316,6 +328,9 @@ def choose_preference(
         user_id=current_user.id,
         username=current_user.username,
         preference_count=total_preferences,
+        satisfaction_ratio=satisfaction_ratio,
+        feedback_count=total_with_feedback,
+        db=db,
         base_url=base_url
     )
 

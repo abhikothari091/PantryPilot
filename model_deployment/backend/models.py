@@ -83,19 +83,3 @@ class RecipePreference(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="preferences")
-
-
-class RetrainingNotification(Base):
-    """
-    Tracks retraining notifications to avoid duplicate alerts.
-    """
-
-    __tablename__ = "retraining_notifications"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True)
-    preference_count = Column(Integer, nullable=False)
-    satisfaction_ratio = Column(Float, nullable=False)
-    notified_at = Column(DateTime, default=datetime.utcnow)
-    approved = Column(Boolean, default=False)
-    training_started = Column(Boolean, default=False)

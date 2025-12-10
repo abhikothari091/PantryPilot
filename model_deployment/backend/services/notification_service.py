@@ -7,22 +7,16 @@ import os
 import requests
 from datetime import datetime
 from typing import Optional
-from sqlalchemy.orm import Session
-
-from models import RetrainingNotification
 
 # Configuration
 PREFERENCE_THRESHOLD = 50
-SATISFACTION_THRESHOLD = 0.70
-FEEDBACK_THRESHOLD = 50
 
 
 def send_slack_alert(
     user_id: int,
     username: str,
     preference_count: int,
-    approval_url: str,
-    satisfaction_ratio: float
+    approval_url: str
 ) -> bool:
     """
     Send a Slack alert when a user reaches the preference threshold.
@@ -42,9 +36,8 @@ def send_slack_alert(
     webhook_url = os.getenv("SLACK_WEBHOOK_URL")
     
     if not webhook_url:
-        print("[ALERT] SLACK_WEBHOOK_URL not configured.")
+        print(f"[ALERT] SLACK_WEBHOOK_URL not configured.")
         print(f"[ALERT] User {username} (ID: {user_id}) reached {preference_count} preferences!")
-        print(f"[ALERT] Satisfaction ratio: {satisfaction_ratio:.1%}")
         print(f"[ALERT] Approval URL: {approval_url}")
         return False
     
@@ -65,8 +58,6 @@ def send_slack_alert(
                     {"type": "mrkdwn", "text": f"*User:*\n{username}"},
                     {"type": "mrkdwn", "text": f"*User ID:*\n{user_id}"},
                     {"type": "mrkdwn", "text": f"*Preferences:*\n{preference_count}"},
-                    {"type": "mrkdwn", "text": f"*Satisfaction:*\n{satisfaction_ratio:.1%}"},
-                    {"type": "mrkdwn", "text": "*Status:*\n⚠️ Below 70% threshold"},
                     {"type": "mrkdwn", "text": f"*Time:*\n{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"}
                 ]
             },
@@ -115,9 +106,6 @@ def check_and_notify_threshold(
     user_id: int,
     username: str,
     preference_count: int,
-    satisfaction_ratio: float,
-    feedback_count: int,
-    db: Session,
     base_url: str = "http://localhost:8000"
 ) -> Optional[bool]:
     """
@@ -126,42 +114,16 @@ def check_and_notify_threshold(
     Returns:
         True if notification sent, False if failed, None if threshold not reached
     """
-    if feedback_count < FEEDBACK_THRESHOLD:
-        return None
-
-    if preference_count < PREFERENCE_THRESHOLD:
-        return None
-
-    if satisfaction_ratio >= SATISFACTION_THRESHOLD:
-        return None
-
-    existing = db.query(RetrainingNotification).filter(
-        RetrainingNotification.user_id == user_id,
-        RetrainingNotification.training_started == False
-    ).first()
-
-    if existing:
+    if preference_count != PREFERENCE_THRESHOLD:
         return None
     
     print(f"[ALERT] User {username} (ID: {user_id}) reached {preference_count} preferences!")
-    print(f"[ALERT] Satisfaction ratio: {satisfaction_ratio:.1%}")
     
     approval_url = f"{base_url}/training/approve/{user_id}"
     
-    sent = send_slack_alert(
+    return send_slack_alert(
         user_id=user_id,
         username=username,
         preference_count=preference_count,
-        approval_url=approval_url,
-        satisfaction_ratio=satisfaction_ratio
+        approval_url=approval_url
     )
-
-    notification = RetrainingNotification(
-        user_id=user_id,
-        preference_count=preference_count,
-        satisfaction_ratio=satisfaction_ratio
-    )
-    db.add(notification)
-    db.commit()
-
-    return sent

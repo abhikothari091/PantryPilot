@@ -1,0 +1,31 @@
+name: Daily Health Report
+
+on:
+  schedule:
+    - cron: "0 12 * * *" # 07:00 AM EST (12:00 UTC)
+  workflow_dispatch:
+
+jobs:
+  daily-health:
+    if: ${{ vars.ENABLE_DAILY_HEALTH == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r model_deployment/backend/requirements.txt
+
+      - name: Send daily health report to Slack
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          python model_deployment/ops/daily_health_report.py

@@ -1,0 +1,44 @@
+# Use NVIDIA CUDA base image for GPU support
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 python3-pip git curl \
+    apt-transport-https ca-certificates gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Cloud SDK (for GCS upload)
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
+    apt-get update && apt-get install -y google-cloud-cli && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy backend requirements for DB access (SQLAlchemy, psycopg2)
+COPY model_deployment/backend/requirements.txt /tmp/backend_reqs.txt
+RUN pip install --no-cache-dir -r /tmp/backend_reqs.txt
+
+# Copy training requirements
+# Assuming we need transformers, peft, trl, bitsandbytes etc.
+# Creating a minimal requirements list for training if not exists
+RUN pip install --no-cache-dir \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+RUN pip install --no-cache-dir \
+    transformers>=4.40 peft trl bitsandbytes accelerate scipy
+
+# Copy training pipeline code
+COPY model_development/training_pipeline /app/model_development/training_pipeline
+
+# Copy backend models for DB ORM
+COPY model_deployment/backend/models.py /app/model_deployment/backend/models.py
+COPY model_deployment/backend/database.py /app/model_deployment/backend/database.py
+
+# Copy entrypoint script
+COPY model_development/training_pipeline/05_dpo_training/scripts/cloud_train_entrypoint.py /app/cloud_train_entrypoint.py
+
+# Set python path to allow importing models
+ENV PYTHONPATH=/app
+
+CMD ["python3", "cloud_train_entrypoint.py"]

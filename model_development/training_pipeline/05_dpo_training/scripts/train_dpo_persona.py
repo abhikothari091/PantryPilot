@@ -69,17 +69,18 @@ def train_dpo_persona(
     training_args = DPOConfig(
         output_dir=output_dir,
         num_train_epochs=3,
-        per_device_train_batch_size=4,
-        per_device_eval_batch_size=4,
-        gradient_accumulation_steps=4,  # Effective batch = 16
+        per_device_train_batch_size=1,  # Reduced for L4 GPU memory
+        per_device_eval_batch_size=1,   # Reduced for L4 GPU memory
+        gradient_accumulation_steps=8,  # Effective batch = 8
 
         learning_rate=5e-5,  # DPO는 일반적으로 낮은 LR
         weight_decay=0.01,
         warmup_ratio=0.1,
         lr_scheduler_type="cosine",
 
-        bf16=True,  # A100은 BF16 native 지원 (FP16보다 안정적)
-        gradient_checkpointing=False,  # Quantized model에서 gradient checkpointing 비활성화
+        bf16=True,  # L4/A100은 BF16 native 지원
+        gradient_checkpointing=True,  # Enable to save memory
+        gradient_checkpointing_kwargs={"use_reentrant": False},  # Required for DPO
         logging_steps=10,
         eval_strategy="steps",
         eval_steps=50,
@@ -92,6 +93,8 @@ def train_dpo_persona(
         greater_is_better=False,
 
         report_to="none",  # MLflow 연동 시 변경
+        max_length=512,  # Limit sequence length to save memory
+        max_prompt_length=256,
     )
 
     # 4. DPO Trainer 초기화

@@ -41,9 +41,9 @@ def test_pending_retraining_as_admin(client: TestClient, test_db: Session):
 
 def test_approve_retraining_user_not_found(client: TestClient, test_db: Session):
     """Approve retraining fails for non-existent user."""
-    response = client.post("/training/approve/99999")
+    response = client.get("/training/approve/99999")  # GET, not POST
     assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
+    assert "User not found" in response.text  # HTMLResponse returns text
 
 
 def test_approve_retraining_insufficient_preferences(client: TestClient, test_db: Session):
@@ -58,9 +58,9 @@ def test_approve_retraining_insufficient_preferences(client: TestClient, test_db
     test_db.commit()
     test_db.refresh(user)
     
-    response = client.post(f"/training/approve/{user.id}")
+    response = client.get(f"/training/approve/{user.id}")  # GET, not POST
     assert response.status_code == 400
-    assert "Minimum 50 required" in response.json()["detail"]
+    assert "Minimum 50 required" in response.text  # HTMLResponse returns text
 
 
 def test_export_requires_admin(client: TestClient, test_user, auth_headers):

@@ -1,0 +1,731 @@
+[m[1mNAME[m
+    gcloud beta run deploy - create or update a Cloud Run service
+
+[m[1mSYNOPSIS[m
+    [1mgcloud beta run deploy[m [[[4mSERVICE[m] [1m--namespace[m=[4mNAMESPACE[m]
+        [[1m--[no-]allow-unauthenticated[m] [[1m--async[m] [[1m--breakglass[m=[4mJUSTIFICATION[m]
+        [[1m--clear-vpc-connector[m] [[1m--concurrency[m=[4mCONCURRENCY[m]
+        [[1m--container[m=[4mCONTAINER[m] [[1m--[no-]cpu-boost[m] [[1m--[no-]cpu-throttling[m]
+        [[1m--[no-]default-url[m] [[1m--[no-]deploy-health-check[m]
+        [[1m--description[m=[4mDESCRIPTION[m]
+        [[1m--execution-environment[m=[4mEXECUTION_ENVIRONMENT[m] [[1m--gpu-type[m=[4mGPU_TYPE[m]
+        [[1m--ingress[m=[4mINGRESS[m; default="all"] [[1m--[no-]invoker-iam-check[m]
+        [[1m--max-instances[m=[4mMAX_INSTANCES[m] [[1m--mesh[m=[4mMESH[m]
+        [[1m--min-instances[m=[4mMIN_INSTANCES[m] [[1m--region[m=[4mREGION[m]
+        [[1m--remove-containers[m=[[4mCONTAINER[m,...]]
+        [[1m--revision-suffix[m=[4mREVISION_SUFFIX[m] [[1m--service-account[m=[4mSERVICE_ACCOUNT[m]
+        [[1m--service-min-instances[m=[4mSERVICE_MIN_INSTANCES[m]
+        [[1m--[no-]session-affinity[m] [[1m--tag[m=[4mTAG[m] [[1m--timeout[m=[4mTIMEOUT[m]
+        [[1m--no-traffic[m] [[1m--vpc-connector[m=[4mVPC_CONNECTOR[m]
+        [[1m--vpc-egress[m=[4mVPC_EGRESS[m]
+        [[1m--add-cloudsql-instances[m=[[4mCLOUDSQL-INSTANCES[m,...]
+          | [1m--clear-cloudsql-instances[m
+          | [1m--remove-cloudsql-instances[m=[[4mCLOUDSQL-INSTANCES[m,...]
+          | [1m--set-cloudsql-instances[m=[[4mCLOUDSQL-INSTANCES[m,...]]
+        [[1m--add-custom-audiences[m=[[4mCUSTOM-AUDIENCES[m,...]
+          | [1m--clear-custom-audiences[m
+          | [1m--remove-custom-audiences[m=[[4mCUSTOM-AUDIENCES[m,...]
+          | [1m--set-custom-audiences[m=[[4mCUSTOM-AUDIENCES[m,...]]
+        [[1m--add-volume[m=[[4mKEY[m=[4mVALUE[m,...]
+          [1m--clear-volumes[m [1m--remove-volume[m=[[4mVOLUME[m,...]]
+        [[1m--add-volume-mount[m=[[4mvolume[m=[4mNAME[m,[4mmount-path[m=[4mMOUNT_PATH[m,...]
+          [1m--args[m=[[4mARG[m,...] [1m--[no-]automatic-updates[m [1m--clear-volume-mounts[m
+          [1m--cpu[m=[4mCPU[m [1m--depends-on[m=[[4mCONTAINER[m,...] [1m--gpu[m=[4mGPU[m [1m--memory[m=[4mMEMORY[m
+          [1m--port[m=[4mPORT[m [1m--remove-volume-mount[m=[[4mMOUNT_PATH[m,...]
+          [1m--[no-]use-http2[m [1m--base-image[m=[4mBASE_IMAGE[m
+          | [1m--clear-base-image[m [1m--build-env-vars-file[m=[4mFILE_PATH[m
+          | [1m--clear-build-env-vars[m | [1m--set-build-env-vars[m=[[4mKEY[m=[4mVALUE[m,...]
+          | [1m--remove-build-env-vars[m=[[4mKEY[m,...]
+          [1m--update-build-env-vars[m=[[4mKEY[m=[4mVALUE[m,...]
+          [1m--build-service-account[m=[4mBUILD_SERVICE_ACCOUNT[m
+          | [1m--clear-build-service-account[m [1m--build-worker-pool[m=[4mBUILD_WORKER_POOL[m
+          | [1m--clear-build-worker-pool[m [1m--clear-env-vars[m
+          | [1m--env-vars-file[m=[4mFILE_PATH[m | [1m--set-env-vars[m=[[4mKEY[m=[4mVALUE[m,...]
+          | [1m--remove-env-vars[m=[[4mKEY[m,...]
+          [1m--update-env-vars[m=[[4mKEY[m=[4mVALUE[m,...] [1m--clear-secrets[m
+          | [1m--set-secrets[m=[[4mKEY[m=[4mVALUE[m,...] | [1m--remove-secrets[m=[[4mKEY[m,...]
+          [1m--update-secrets[m=[[4mKEY[m=[4mVALUE[m,...] [1m--command[m=[[4mCOMMAND[m,...]
+          | [1m--function[m=[4mFUNCTION[m [1m--image[m=[4mIMAGE[m | [1m--source[m=[4mSOURCE[m]
+        [[1m--binary-authorization[m=[4mPOLICY[m | [1m--clear-binary-authorization[m]
+        [[1m--clear-config-maps[m | [1m--set-config-maps[m=[[4mKEY[m=[4mVALUE[m,...]
+          | [1m--remove-config-maps[m=[[4mKEY[m,...]
+          [1m--update-config-maps[m=[[4mKEY[m=[4mVALUE[m,...]]
+        [[1m--clear-encryption-key-shutdown-hours[m
+          | [1m--encryption-key-shutdown-hours[m=[4mENCRYPTION_KEY_SHUTDOWN_HOURS[m]
+        [[1m--clear-key[m | [1m--key[m=[4mKEY[m]
+        [[1m--clear-labels[m | [1m--remove-labels[m=[[4mKEY[m,...] [1m--labels[m=[[4mKEY[m=[4mVALUE[m,...]
+          | [1m--update-labels[m=[[4mKEY[m=[4mVALUE[m,...]]
+        [[1m--clear-network[m
+          | [1m--network[m=[4mNETWORK[m [1m--subnet[m=[4mSUBNET[m [1m--clear-network-tags[m
+          | [1m--network-tags[m=[[4mTAG[m,...]]
+        [[1m--clear-post-key-revocation-action-type[m
+          | [1m--post-key-revocation-action-type[m=[4mPOST_KEY_REVOCATION_ACTION_TYPE[m]
+        [[4mGCLOUD_WIDE_FLAG ...[m]
+
+[m[1mDESCRIPTION[m
+    [1m(BETA)[m Creates or updates a Cloud Run service.
+
+[m[1mEXAMPLES[m
+    To deploy a container to the service [1mmy-backend[m on Cloud Run:
+
+        $ gcloud beta run deploy my-backend \
+          --image=us-docker.pkg.dev/project/image
+
+    You may also omit the service name. Then a prompt will be displayed with a
+    suggested default value:
+
+        $ gcloud beta run deploy --image=us-docker.pkg.dev/project/image
+
+    To deploy to Cloud Run on Kubernetes Engine, you need to specify a cluster:
+
+        $ gcloud beta run deploy --image=us-docker.pkg.dev/project/image \
+          --cluster=my-cluster
+
+[m[1mPOSITIONAL ARGUMENTS[m
+     Service resource - Service to deploy to. The arguments in this group can
+     be used to specify the attributes of this resource.
+
+       [[4mSERVICE[m]
+          ID of the service or fully qualified identifier for the service.
+
+          To set the [1mservice[m attribute:
+          ▸ provide the argument [1mSERVICE[m on the command line;
+          ▸ specify the service name from an interactive prompt.
+
+       [1m--namespace[m=[4mNAMESPACE[m
+          Specific to Cloud Run for Anthos: Kubernetes namespace for the
+          service.
+
+          To set the [1mnamespace[m attribute:
+          ▸ provide the argument [1mSERVICE[m on the command line with a fully
+            specified name;
+          ▸ specify the service name from an interactive prompt with a fully
+            specified name;
+          ▸ provide the argument [1m--namespace[m on the command line;
+          ▸ set the property [1mrun/namespace[m;
+          ▸ For Cloud Run on Kubernetes Engine, defaults to "default".
+            Otherwise, defaults to project ID.;
+          ▸ provide the argument [1mproject[m on the command line;
+          ▸ set the property [1mcore/project[m.
+
+[m[1mFLAGS[m
+     [1m--[no-]allow-unauthenticated[m
+        Whether to enable allowing unauthenticated access to the service. This
+        may take a few moments to take effect. Use [1m--allow-unauthenticated[m to
+        enable and [1m--no-allow-unauthenticated[m to disable.
+
+     [1m--async[m
+        Return immediately, without waiting for the operation in progress to
+        complete.
+
+     [1m--breakglass[m=[4mJUSTIFICATION[m
+        Justification to bypass Binary Authorization policy constraints and
+        allow the operation. See
+        https://cloud.google.com/binary-authorization/docs/using-breakglass for
+        more information. Next update or deploy command will automatically
+        clear existing breakglass justification.
+
+     [1m--clear-vpc-connector[m
+        Remove the VPC connector for this resource.
+
+     [1m--concurrency[m=[4mCONCURRENCY[m
+        Set the maximum number of concurrent requests allowed per container
+        instance. Leave concurrency unspecified or provide the special value
+        'default' to receive the server default value.
+
+     [1m--container[m=[4mCONTAINER[m
+        Specifies a container by name. Flags following --container will apply
+        to the specified container.
+
+     [1m--[no-]cpu-boost[m
+        Whether to allocate extra CPU to containers on startup to reduce the
+        perceived latency of a cold start request. Enabled by default when
+        unspecified on new services. Use [1m--cpu-boost[m to enable and
+        [1m--no-cpu-boost[m to disable.
+
+     [1m--[no-]cpu-throttling[m
+        Whether to throttle the CPU when the container is not actively serving
+        requests. Use [1m--cpu-throttling[m to enable and [1m--no-cpu-throttling[m to
+        disable.
+
+     [1m--[no-]default-url[m
+        Toggles the default url for a run service. This is enabled by default
+        if not specified. Use [1m--default-url[m to enable and [1m--no-default-url[m to
+        disable.
+
+     [1m--[no-]deploy-health-check[m
+        Schedules a single instance of the Revision and waits for it to pass
+        its startup probe for the deployment to succeed. If disabled, the
+        startup probe runs only when the revision is first started via
+        invocation or by setting min-instances. This check is enabled by
+        default when unspecified. Use [1m--deploy-health-check[m to enable and
+        [1m--no-deploy-health-check[m to disable.
+
+     [1m--description[m=[4mDESCRIPTION[m
+        Provides an optional, human-readable description of the service.
+
+     [1m--execution-environment[m=[4mEXECUTION_ENVIRONMENT[m
+        Selects the execution environment where the application will run.
+        [4mEXECUTION_ENVIRONMENT[m must be one of:
+
+         [1mgen1[m
+            Run the application in a first generation execution environment.
+         [1mgen2[m
+            Run the application in a second generation execution environment.
+
+     [1m--gpu-type[m=[4mGPU_TYPE[m
+        The GPU type to use.
+
+     [1m--ingress[m=[4mINGRESS[m; default="all"
+        Set the ingress traffic sources allowed to call the service. For Cloud
+        Run the [1m--[no-]allow-unauthenticated[m flag separately controls the
+        identities allowed to call the service. [4mINGRESS[m must be one of:
+
+         [1mall[m
+            Inbound requests from all sources are allowed.
+         [1minternal[m
+            For Cloud Run, only inbound requests from VPC networks in the same
+            project or VPC Service Controls perimeter, as well as Pub/Sub
+            subscriptions and Eventarc events in the same project or VPC
+            Service Controls perimeter are allowed. All other requests are
+            rejected. See https://cloud.google.com/run/docs/securing/ingress
+            for full details on the definition of internal traffic for Cloud
+            Run.
+
+         [1minternal-and-cloud-load-balancing[m
+            Only inbound requests from Google Cloud Load Balancing or a traffic
+            source allowed by the internal option are allowed.
+
+     [1m--[no-]invoker-iam-check[m
+        Optionally disable invoker IAM checks. This feature is available by
+        invitation only. More info at
+        https://cloud.google.com/run/docs/securing/managing-access#invoker_check.
+        Use [1m--invoker-iam-check[m to enable and [1m--no-invoker-iam-check[m to
+        disable.
+
+     [1m--max-instances[m=[4mMAX_INSTANCES[m
+        The maximum number of container instances of the Service to run. Use
+        'default' to unset the limit and use the platform default.
+
+     [1m--mesh[m=[4mMESH[m
+        Enables Cloud Service Mesh using the specified mesh resource name. Mesh
+        resource name must be in the format of
+        projects/PROJECT/locations/global/meshes/MESH_NAME.
+
+     [1m--min-instances[m=[4mMIN_INSTANCES[m
+        The minimum number of container instances for this Revision of the
+        Service to run or 'default' to remove any minimum.
+
+     [1m--region[m=[4mREGION[m
+        Region in which the resource can be found. Alternatively, set the
+        property [run/region].
+
+     [1m--remove-containers[m=[[4mCONTAINER[m,...]
+        List of containers to remove.
+
+     [1m--revision-suffix[m=[4mREVISION_SUFFIX[m
+        Specify the suffix of the revision name. Revision names always start
+        with the service name automatically. For example, specifying
+        [--revision-suffix=v1] for a service named 'helloworld', would lead to
+        a revision named 'helloworld-v1'. Set empty string to clear the suffix
+        and resume server-assigned naming.
+
+     [1m--service-account[m=[4mSERVICE_ACCOUNT[m
+        the email address of an IAM service account associated with the
+        revision of the service. The service account represents the identity of
+        the running revision, and determines what permissions the revision has.
+
+     [1m--service-min-instances[m=[4mSERVICE_MIN_INSTANCES[m
+        The minimum number of container instances for this Service to run or
+        'default' to remove any minimum. These instances will be divided among
+        all Revisions receiving a percentage of traffic.
+
+     [1m--[no-]session-affinity[m
+        Whether to enable session affinity for connections to the service. Use
+        [1m--session-affinity[m to enable and [1m--no-session-affinity[m to disable.
+
+     [1m--tag[m=[4mTAG[m
+        Traffic tag to assign to the newly created revision.
+
+     [1m--timeout[m=[4mTIMEOUT[m
+        Set the maximum request execution time (timeout). It is specified as a
+        duration; for example, "10m5s" is ten minutes, and five seconds. If you
+        don't specify a unit, seconds is assumed. For example, "10" is 10
+        seconds.
+
+     [1m--no-traffic[m
+        True to avoid sending traffic to the revision being deployed. Setting
+        this flag assigns any traffic assigned to the LATEST revision to the
+        specific revision bound to LATEST before the deployment. The effect is
+        that the revision being deployed will not receive traffic.
+
+        After a deployment with this flag the LATEST revision will not receive
+        traffic on future deployments. To restore sending traffic to the LATEST
+        revision by default, run the [1mgcloud run services update-traffic[m command
+        with [1m--to-latest[m.
+
+     [1m--vpc-connector[m=[4mVPC_CONNECTOR[m
+        Set a VPC connector for this resource.
+
+     [1m--vpc-egress[m=[4mVPC_EGRESS[m
+        Specify which of the outbound traffic to send through Direct VPC egress
+        or the VPC connector for this resource. This resource must have Direct
+        VPC egress enabled or a VPC connector to set this flag. [4mVPC_EGRESS[m must
+        be one of:
+
+         [1mall[m
+            (DEPRECATED) Sends all outbound traffic through Direct VPC egress
+            or the VPC connector. Provides the same functionality as
+            'all-traffic'. Prefer to use 'all-traffic' instead.
+         [1mall-traffic[m
+            Sends all outbound traffic through Direct VPC egress or the VPC
+            connector.
+         [1mprivate-ranges-only[m
+            Default option. Sends outbound traffic to private IP addresses (RFC
+            1918 and Private Google Access IPs) through Direct VPC egress or
+            the VPC connector.
+
+            Traffic to other Cloud Run services might require additional
+            configuration. See
+            https://cloud.google.com/run/docs/securing/private-networking#send_requests_to_other_services_and_services
+            for more information.
+
+     These flags modify the Cloud SQL instances this Service connects to. You
+     can specify a name of a Cloud SQL instance if it's in the same project and
+     region as your Cloud Run service; otherwise specify
+     <project>:<region>:<instance> for the instance.
+
+     At most one of these can be specified:
+
+       [1m--add-cloudsql-instances[m=[[4mCLOUDSQL-INSTANCES[m,...]
+          Append the given values to the current Cloud SQL instances.
+
+       [1m--clear-cloudsql-instances[m
+          Empty the current Cloud SQL instances.
+
+       [1m--remove-cloudsql-instances[m=[[4mCLOUDSQL-INSTANCES[m,...]
+          Remove the given values from the current Cloud SQL instances.
+
+       [1m--set-cloudsql-instances[m=[[4mCLOUDSQL-INSTANCES[m,...]
+          Completely replace the current Cloud SQL instances with the given
+          values.
+
+     These flags modify the custom audiences that can be used in the audience
+     field of ID token for authenticated requests.
+
+     At most one of these can be specified:
+
+       [1m--add-custom-audiences[m=[[4mCUSTOM-AUDIENCES[m,...]
+          Append the given values to the current custom audiences.
+
+       [1m--clear-custom-audiences[m
+          Empty the current custom audiences.
+
+       [1m--remove-custom-audiences[m=[[4mCUSTOM-AUDIENCES[m,...]
+          Remove the given values from the current custom audiences.
+
+       [1m--set-custom-audiences[m=[[4mCUSTOM-AUDIENCES[m,...]
+          Completely replace the current custom audiences with the given
+          values.
+
+     [1m--add-volume[m=[[4mKEY[m=[4mVALUE[m,...]
+        Adds a volume to the Cloud Run resource. To add more than one volume,
+        specify this flag multiple times. Volumes must have a [1mname[m and [1mtype[m
+        key. Only certain values are supported for [1mtype[m. Depending on the
+        provided type, other keys will be required. The following types are
+        supported with the specified additional keys:
+
+        [1mcloud-storage[m: A volume representing a Cloud Storage bucket. This
+        volume type is mounted using Cloud Storage FUSE. See
+        https://cloud.google.com/storage/docs/gcs-fuse for the details and
+        limitations of this filesystem. Additional keys:
+        ◆ bucket: (required) the name of the bucket to use as the source of
+          this volume
+        ◆ readonly: (optional) A boolean. If true, this volume will be
+          read-only from all mounts.
+        ◆ mount-options: (optional) A list of flags to pass to GCSFuse. Flags
+          should be specified without leading dashes and separated by
+          semicolons.
+
+        [1min-memory[m: An ephemeral volume that stores data in the instance's
+        memory. With this type of volume, data is not shared between instances
+        and all data will be lost when the instance it is on is terminated.
+        Additional keys:
+        ◆ size-limit: (optional) A quantity representing the maximum amount
+          of memory allocated to this volume, such as "512Mi" or "3G". Data
+          stored in an in-memory volume consumes the memory allocation of the
+          container that wrote the data. If size-limit is not specified, the
+          maximum size will be half the total memory limit of all containers.
+
+        [1mnfs[m: Represents a volume backed by an NFS server. Additional keys:
+        ◆ location: (required) The location of the NFS Server, in the form
+          SERVER:/PATH
+        ◆ readonly: (optional) A boolean. If true, this volume will be
+          read-only from all mounts.
+
+     [1m--clear-volumes[m
+        Remove all existing volumes from the Cloud Run resource, including
+        volumes mounted as secrets
+
+     [1m--remove-volume[m=[[4mVOLUME[m,...]
+        Removes volumes from the Cloud Run resource.
+
+    Container Flags
+
+        The following flags apply to a single container. If the --container flag is specified these flags may only be
+        specified after a --container flag. Otherwise they will apply to the primary ingress container.
+
+         [1m--add-volume-mount[m=[[4mvolume[m=[4mNAME[m,[4mmount-path[m=[4mMOUNT_PATH[m,...]
+            Adds a mount to the current container. Must contain the keys
+            [1mvolume=NAME[m and [1mmount-path=/PATH[m where NAME is the name of a volume
+            on this resource and PATH is the path within the container's
+            filesystem to mount this volume.
+
+         [1m--args[m=[[4mARG[m,...]
+            Comma-separated arguments passed to the command run by the
+            container image. If not specified and no '--command' is provided,
+            the container image's default Cmd is used. Otherwise, if not
+            specified, no arguments are passed. To reset this field to its
+            default, pass an empty string.
+
+         [1m--[no-]automatic-updates[m
+            Indicates whether automatic base image updates should be enabled
+            for an image built from source. Use [1m--automatic-updates[m to enable
+            and [1m--no-automatic-updates[m to disable.
+
+         [1m--clear-volume-mounts[m
+            Remove all existing mounts from the current container.
+
+         [1m--cpu[m=[4mCPU[m
+            Set a CPU limit in Kubernetes cpu units.
+
+            Cloud Run supports values fractional values below 1, 1, 2, 4, and
+            8. Some CPU values requires a minimum Memory [1m--memory[m value.
+
+         [1m--depends-on[m=[[4mCONTAINER[m,...]
+            List of container dependencies to add to the current container.
+
+         [1m--gpu[m=[4mGPU[m
+            Cloud Run supports values 0 or 1. 1 gpu also requires a minimum 4
+            [1m--cpu[m value 1 gpu also requires a minimum 8Gi [1m--memory[m value.
+
+         [1m--memory[m=[4mMEMORY[m
+            Set a memory limit. Ex: 1024Mi, 4Gi.
+
+         [1m--port[m=[4mPORT[m
+            Container port to receive requests at. Also sets the $PORT
+            environment variable. Must be a number between 1 and 65535,
+            inclusive. To unset this field, pass the special value "default".
+            If updating an existing service with a TCP startup probe pointing
+            to the previous container port, this will also update the probe
+            port.
+
+         [1m--remove-volume-mount[m=[[4mMOUNT_PATH[m,...]
+            Removes the volume mounted at the specified path from the current
+            container.
+
+         [1m--[no-]use-http2[m
+            Whether to use HTTP/2 for connections to the service. Use
+            [1m--use-http2[m to enable and [1m--no-use-http2[m to disable.
+
+         At most one of these can be specified:
+
+           [1m--base-image[m=[4mBASE_IMAGE[m
+              Specifies the base image to be used for automatic base image
+              updates. When deploying from source using the Google Cloud
+              buildpacks, this flag will also override the base image used for
+              the application image. See
+              https://cloud.google.com/run/docs/deploying-source-code for more
+              details.
+
+           [1m--clear-base-image[m
+              Opts out of automatic base image updates.
+
+         At most one of these can be specified:
+
+           [1m--build-env-vars-file[m=[4mFILE_PATH[m
+              Path to a local YAML file with definitions for all build
+              environment variables. All existing build environment variables
+              will be removed before the new build environment variables are
+              added. Example YAML content:
+
+                  KEY_1: "value1"
+                  KEY_2: "value 2"
+
+           [1m--clear-build-env-vars[m
+              Remove all build environment variables.
+
+           [1m--set-build-env-vars[m=[[4mKEY[m=[4mVALUE[m,...]
+              List of key-value pairs to set as build environment variables.
+              All existing build environment variables will be removed first.
+
+           Only --update-build-env-vars and --remove-build-env-vars can be used
+           together. If both are specified, --remove-build-env-vars will be
+           applied first.
+
+             [1m--remove-build-env-vars[m=[[4mKEY[m,...]
+                List of build environment variables to be removed.
+
+             [1m--update-build-env-vars[m=[[4mKEY[m=[4mVALUE[m,...]
+                List of key-value pairs to set as build environment variables.
+
+         At most one of these can be specified:
+
+           [1m--build-service-account[m=[4mBUILD_SERVICE_ACCOUNT[m
+              Specifies the service account to use to execute the build.
+              Applies only to source deploy builds using the Build API.
+
+           [1m--clear-build-service-account[m
+              Clears the Cloud Build service account field.
+
+         At most one of these can be specified:
+
+           [1m--build-worker-pool[m=[4mBUILD_WORKER_POOL[m
+              Name of the Cloud Build Custom Worker Pool that should be used to
+              build the function. The format of this field is
+              [1mprojects/${PROJECT}/locations/${LOCATION}/workerPools/${WORKERPOOL}[m
+              where ${PROJECT} is the project id and ${LOCATION} is the
+              location where the worker pool is defined and ${WORKERPOOL} is
+              the short name of the worker pool.
+
+           [1m--clear-build-worker-pool[m
+              Clears the Cloud Build Custom Worker Pool field.
+
+         At most one of these can be specified:
+
+           [1m--clear-env-vars[m
+              Remove all environment variables.
+
+           [1m--env-vars-file[m=[4mFILE_PATH[m
+              Path to a local YAML file with definitions for all environment
+              variables. All existing environment variables will be removed
+              before the new environment variables are added. Example YAML
+              content:
+
+                  KEY_1: "value1"
+                  KEY_2: "value 2"
+
+           [1m--set-env-vars[m=[[4mKEY[m=[4mVALUE[m,...]
+              List of key-value pairs to set as environment variables. All
+              existing environment variables will be removed first.
+
+           Only --update-env-vars and --remove-env-vars can be used together.
+           If both are specified, --remove-env-vars will be applied first.
+
+             [1m--remove-env-vars[m=[[4mKEY[m,...]
+                List of environment variables to be removed.
+
+             [1m--update-env-vars[m=[[4mKEY[m=[4mVALUE[m,...]
+                List of key-value pairs to set as environment variables.
+
+         Specify secrets to mount or provide as environment variables. Keys
+         starting with a forward slash '/' are mount paths. All other keys
+         correspond to environment variables. Values should be in the form
+         SECRET_NAME:SECRET_VERSION. For example:
+         '--update-secrets=/secrets/api/key=mysecret:latest,ENV=othersecret:1'
+         will mount a volume at '/secrets/api' containing a file 'key' with the
+         latest version of secret 'mysecret'. An environment variable named ENV
+         will also be created whose value is version 1 of secret 'othersecret'.
+
+         At most one of these can be specified:
+
+           [1m--clear-secrets[m
+              Remove all secrets.
+
+           [1m--set-secrets[m=[[4mKEY[m=[4mVALUE[m,...]
+              List of key-value pairs to set as secrets. All existing secrets
+              will be removed first.
+
+           Only --update-secrets and --remove-secrets can be used together. If
+           both are specified, --remove-secrets will be applied first.
+
+             [1m--remove-secrets[m=[[4mKEY[m,...]
+                List of secrets to be removed.
+
+             [1m--update-secrets[m=[[4mKEY[m=[4mVALUE[m,...]
+                List of key-value pairs to set as secrets.
+
+         At most one of these can be specified:
+
+           [1m--command[m=[[4mCOMMAND[m,...]
+              Entrypoint for the container image. If not specified, the
+              container image's default Entrypoint is run. To reset this field
+              to its default, pass an empty string.
+
+           [1m--function[m=[4mFUNCTION[m
+              Specifies that the deployed object is a function. If a value is
+              provided, that value is used as the entrypoint.
+
+         At most one of these can be specified:
+
+           [1m--image[m=[4mIMAGE[m
+              Name of the container image to deploy (e.g.
+              [1mus-docker.pkg.dev/cloudrun/container/hello:latest[m).
+
+           [1m--source[m=[4mSOURCE[m
+              The location of the source to build. If a Dockerfile is present
+              in the source code directory, it will be built using that
+              Dockerfile, otherwise it will use Google Cloud buildpacks. See
+              https://cloud.google.com/run/docs/deploying-source-code for more
+              details. The location can be a directory on a local disk or a
+              gzipped archive file (.tar.gz) in Google Cloud Storage. If the
+              source is a local directory, this command skips the files
+              specified in the [1m--ignore-file[m. If [1m--ignore-file[m is not
+              specified, use [1m.gcloudignore[m file. If a [1m.gcloudignore[m file is
+              absent and a [1m.gitignore[m file is present in the local source
+              directory, gcloud will use a generated Git-compatible
+              [1m.gcloudignore[m file that respects your .gitignored files. The
+              global [1m.gitignore[m is not respected. For more information on
+              [1m.gcloudignore[m, see [1mgcloud topic gcloudignore[m.
+
+     At most one of these can be specified:
+
+       [1m--binary-authorization[m=[4mPOLICY[m
+          Binary Authorization policy to check against. This must be set to
+          "default".
+
+       [1m--clear-binary-authorization[m
+          Remove any previously set Binary Authorization policy.
+
+     Specify config map to mount or provide as environment variables. Keys
+     starting with a forward slash '/' are mount paths. All other keys
+     correspond to environment variables. The values associated with each of
+     these should be in the form CONFIG_MAP_NAME:KEY_IN_CONFIG_MAP; you may
+     omit the key within the config map to specify a mount of all keys within
+     the config map. For example:
+     '--update-config-maps=/my/path=myconfig,ENV=otherconfig:key.json' will
+     create a volume with config map 'myconfig' and mount that volume at
+     '/my/path'. Because no config map key was specified, all keys in
+     'myconfig' will be included. An environment variable named ENV will also
+     be created whose value is the value of 'key.json' in 'otherconfig. Not
+     supported on the fully managed version of Cloud Run.
+
+     At most one of these can be specified:
+
+       [1m--clear-config-maps[m
+          Remove all config-maps.
+
+       [1m--set-config-maps[m=[[4mKEY[m=[4mVALUE[m,...]
+          List of key-value pairs to set as config-maps. All existing
+          config-maps will be removed first.
+
+       Only --update-config-maps and --remove-config-maps can be used together.
+       If both are specified, --remove-config-maps will be applied first.
+
+         [1m--remove-config-maps[m=[[4mKEY[m,...]
+            List of config-maps to be removed.
+
+         [1m--update-config-maps[m=[[4mKEY[m=[4mVALUE[m,...]
+            List of key-value pairs to set as config-maps.
+
+     At most one of these can be specified:
+
+       [1m--clear-encryption-key-shutdown-hours[m
+          Remove any previously set CMEK key shutdown hours setting.
+
+       [1m--encryption-key-shutdown-hours[m=[4mENCRYPTION_KEY_SHUTDOWN_HOURS[m
+          The number of hours to wait before an automatic shutdown server after
+          CMEK key revocation is detected.
+
+     At most one of these can be specified:
+
+       [1m--clear-key[m
+          Remove any previously set CMEK key reference.
+
+       [1m--key[m=[4mKEY[m
+          CMEK key reference to encrypt the container with.
+
+     At most one of these can be specified:
+
+       [1m--clear-labels[m
+          Remove all labels. If [1m--update-labels[m is also specified then
+          [1m--clear-labels[m is applied first.
+
+          For example, to remove all labels:
+
+              $ gcloud beta run deploy --clear-labels
+
+          To remove all existing labels and create two new labels, [1m[1;4mfoo[1m[m and [1m[1;4mbaz[1m[m:
+
+              $ gcloud beta run deploy --clear-labels \
+                --update-labels foo=bar,baz=qux
+
+       [1m--remove-labels[m=[[4mKEY[m,...]
+          List of label keys to remove. If a label does not exist it is
+          silently ignored. If [1m--update-labels[m is also specified then
+          [1m--update-labels[m is applied first.
+
+     At most one of these can be specified:
+
+       [1m--labels[m=[[4mKEY[m=[4mVALUE[m,...]
+          List of label KEY=VALUE pairs to add.
+
+          An alias to --update-labels.
+
+       [1m--update-labels[m=[[4mKEY[m=[4mVALUE[m,...]
+          List of label KEY=VALUE pairs to update. If a label exists, its value
+          is modified. Otherwise, a new label is created.
+
+     At most one of these can be specified:
+
+       [1m--clear-network[m
+          Disconnect this Cloud Run service from the VPC network it is
+          connected to.
+
+       Direct VPC egress setting flags group.
+
+         [1m--network[m=[4mNETWORK[m
+            The VPC network that the Cloud Run service will be able to send
+            traffic to. If --subnet is also specified, subnet must be a
+            subnetwork of the network specified by this --network flag. To
+            clear existing VPC network settings, use --clear-network.
+
+         [1m--subnet[m=[4mSUBNET[m
+            The VPC subnetwork that the Cloud Run service will get IPs from.
+            The subnetwork must be [1m/26[m or larger. If --network is also
+            specified, subnet must be a subnetwork of the network specified by
+            the --network flag. If --network is not specified, network will be
+            looked up from this subnetwork. To clear existing VPC network
+            settings, use --clear-network.
+
+         At most one of these can be specified:
+
+           [1m--clear-network-tags[m
+              Clears all existing Compute Engine tags from the Cloud Run
+              service.
+
+           [1m--network-tags[m=[[4mTAG[m,...]
+              Applies the given Compute Engine tags (comma separated) to the
+              Cloud Run service. To clear existing tags, use
+              --clear-network-tags.
+
+     At most one of these can be specified:
+
+       [1m--clear-post-key-revocation-action-type[m
+          Remove any previously set post CMEK key revocation action type.
+
+       [1m--post-key-revocation-action-type[m=[4mPOST_KEY_REVOCATION_ACTION_TYPE[m
+          Action type after CMEK key revocation.
+          [4mPOST_KEY_REVOCATION_ACTION_TYPE[m must be one of:
+
+           [1mprevent-new[m
+              No new instances will be started after CMEK key revocation.
+           [1mshut-down[m
+              No new instances will be started and the existing instances will
+              be shut down after CMEK key revocation.
+
+[m[1mGCLOUD WIDE FLAGS[m
+    These flags are available to all commands: --access-token-file, --account,
+    --billing-project, --configuration, --flags-file, --flatten, --format,
+    --help, --impersonate-service-account, --log-http, --project, --quiet,
+    --trace-token, --user-output-enabled, --verbosity.
+
+    Run [1m$ gcloud help[m for details.
+
+[m[1mNOTES[m
+    This command is currently in beta and might change without notice. This
+    variant is also available:
+
+        $ gcloud run deploy
+
+[m

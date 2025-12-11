@@ -691,11 +691,61 @@ python evaluate_dpo_personas.py --project_id YOUR_GCP_PROJECT_ID --personas all
 - DVC tracks: `data/variants/`, `data/preference_pairs/`, `data/dpo_formatted/`
 - Remote: GCS
 
-**Future Enhancements**:
+#### 6. Automated DPO Retraining Pipeline (Cloud Run) 🔄
 
-- Automatic retraining based on user feedback threshold
-- Real-time user preference collection via API
-- A/B testing deployment for model validation
+We implemented a fully automated retraining pipeline using **Google Cloud Run Jobs** that enables continuous model improvement based on user feedback.
+
+**Architecture:**
+
+```
+[50 Preferences] → [Slack Alert] → [Approve Button] → [Cloud Run Job] → [GCS: New Model]
+                                         ↓
+                              trigger_cloud_run_job()
+```
+
+**Components:**
+
+| File | Purpose |
+|------|---------|
+| `model_development/Dockerfile.training` | GPU-enabled training container (CUDA 12.1, PyTorch) |
+| `cloud_train_entrypoint.py` | Job entrypoint: fetches data, trains, uploads model |
+| `setup_training_job.sh` | Script to create Cloud Run Job with GPU |
+| `dpo_training_service.py` | Backend service that triggers Cloud Run Job |
+
+**Training Flow:**
+
+1. **Fetch Data**: Query `recipe_preferences` table for unexported feedback
+2. **Download Adapter**: Use latest trained model (iterative) or original LoRA
+3. **DPO Training**: Run training with accumulated preference data
+4. **Upload Model**: Save to `gs://pantrypilot-dpo-models/v{timestamp}/`
+5. **Backup Data**: Archive training data to `gs://pantrypilot-dvc-storage/`
+6. **Update DB**: Mark processed records as exported
+
+**Setup:**
+
+```bash
+# 1. Build and push training image
+bash model_deployment/ops/setup_training_job.sh
+
+# 2. Configure Job in Cloud Console (GPU: NVIDIA L4, No Zonal Redundancy)
+# Required env vars: DATABASE_URL, BASE_ADAPTER_GCS, GCS_MODEL_BUCKET, HF_TOKEN
+
+# 3. Execute training (manual or via Slack approval)
+gcloud run jobs execute pantrypilot-training-job --region=us-central1
+```
+
+**Key Features:**
+- **Slack Integration**: Approve button triggers training job
+- **Iterative Training**: Each training builds on the previous version's weights
+- **Version Control**: Models saved with timestamps (`v20241211_120000`)
+- **GPU Acceleration**: NVIDIA L4 GPU for faster training
+
+**GCS Buckets:**
+| Bucket | Purpose |
+|--------|---------|
+| `gs://pantrypilot-dpo-models` | Trained model weights (versioned) |
+| `gs://pantrypilot-dvc-storage` | Training data backups |
+| `gs://recipegen-llm-models` | Original LoRA adapter (base) |
 
 See [model_development/training_pipeline/05_dpo_training/README.md](model_development/training_pipeline/05_dpo_training/README.md) for detailed instructions.
 

@@ -324,6 +324,60 @@ flowchart TD
 
 ---
 
+## Automated DPO Retraining (Cloud Run Jobs) 🔄
+
+A fully automated retraining pipeline using **Google Cloud Run Jobs** enables continuous model improvement based on user feedback collected through the DPO comparison feature.
+
+### Architecture
+
+```
+[recipe_preferences table] → [Cloud Run Job: pantrypilot-training-job] → [GCS: pantrypilot-dpo-models]
+                                      ↓
+                           [Inference Service downloads new weights]
+```
+
+### Components
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `Dockerfile.training` | `model_development/` | GPU-enabled training container |
+| `cloud_train_entrypoint.py` | `05_dpo_training/scripts/` | Job entrypoint |
+| `setup_training_job.sh` | `model_deployment/ops/` | Create Cloud Run Job |
+| `auto_retrain_pipeline.py` | `05_dpo_training/scripts/` | Trigger job execution |
+
+### Setup & Execution
+
+```bash
+# 1. Build and push training image
+bash model_deployment/ops/setup_training_job.sh
+
+# 2. Configure Job in Cloud Console
+#    - GPU: NVIDIA L4, No Zonal Redundancy
+#    - Env: DATABASE_URL, BASE_ADAPTER_GCS, GCS_MODEL_BUCKET, HF_TOKEN
+
+# 3. Execute training
+gcloud run jobs execute pantrypilot-training-job --region=us-central1
+```
+
+### Training Flow
+
+1. **Fetch Data**: Query `recipe_preferences` for unexported feedback
+2. **Download Adapter**: Use latest trained model (iterative) or original LoRA
+3. **DPO Training**: Train with accumulated preference data
+4. **Upload Model**: Save to `gs://pantrypilot-dpo-models/v{timestamp}/`
+5. **Backup Data**: Archive to `gs://pantrypilot-dvc-storage/training_data/`
+6. **Update DB**: Mark processed records as exported
+
+### GCS Buckets
+
+| Bucket | Purpose |
+|--------|---------|
+| `pantrypilot-dpo-models` | Trained model weights (versioned) |
+| `pantrypilot-dvc-storage` | Training data backups |
+| `recipegen-llm-models` | Original LoRA adapter (base) |
+
+---
+
 ## Future Extensions (handoff hints)
 
 - Swap model_service to internal model (HF/PEFT) if running locally; keep signature.
@@ -333,6 +387,7 @@ flowchart TD
 - Extend DPO data export for model fine-tuning pipeline.
 - Add multi-page tour steps if cross-page navigation becomes reliable in react-joyride.
 - Consider tour completion persistence (localStorage) to avoid re-showing to returning users.
+- **Automated trigger**: Add Cloud Scheduler to trigger training when preference count threshold is reached.
 
 ---
 

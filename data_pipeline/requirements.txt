@@ -9,6 +9,7 @@ psycopg2-binary==2.9.9
 
 # Validation
 great-expectations==0.18.0
+requests
 
 # Units / Transform
 pint==0.23

@@ -47,8 +47,8 @@ def fetch_data_from_db():
     # Format data
     dpo_data = []
     ids = []
+    skipped = 0
     for row in rows:
-        ids.append(row.id)
         # Simplified logic assuming A/B structure matches
         if row.chosen_variant == "A":
             chosen = row.variant_a_raw
@@ -56,8 +56,21 @@ def fetch_data_from_db():
         else:
             chosen = row.variant_b_raw
             rejected = row.variant_a_raw
+        
+        # Skip records with missing data
+        if not chosen or not rejected or not row.prompt:
+            skipped += 1
+            continue
             
+        ids.append(row.id)
         dpo_data.append({"prompt": row.prompt, "chosen": chosen, "rejected": rejected})
+
+    if skipped > 0:
+        print(f"   Skipped {skipped} records with missing data.")
+    
+    if not dpo_data:
+        print("   No valid training data after filtering.")
+        return None, []
 
     # Save to JSONL
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -67,7 +80,7 @@ def fetch_data_from_db():
         for item in dpo_data:
             f.write(json.dumps(item) + "\n")
             
-    print(f"   Fetched {len(dpo_data)} records.")
+    print(f"   Fetched {len(dpo_data)} valid records.")
     return train_file, ids
 
 def get_latest_trained_model():

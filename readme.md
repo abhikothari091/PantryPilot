@@ -614,6 +614,7 @@ See `model_development/training_pipeline/04_training/LAMBDA_LABS_SETUP_GUIDE.md`
 After SFT training, we use **Direct Preference Optimization (DPO)** to create personalized recipe models for different user personas.
 
 **Key Concepts**:
+
 - **6 Personas**: Korean Spicy, Indian Veg, Italian GF, Japanese Low-Sodium, Mexican Vegan, Chinese Keto
 - **Preference Pairs**: Chosen (good) vs Rejected (bad) recipes labeled by Llama 70B
 - **DPO Training**: Aligns model outputs with persona-specific preferences
@@ -627,59 +628,71 @@ After SFT training, we use **Direct Preference Optimization (DPO)** to create pe
 ```
 
 **Stage 1: Generate Variants**
+
 ```bash
 cd model_development/training_pipeline/05_dpo_training/scripts/
 python generate_variants.py --persona persona_a_korean_spicy --count 500
 ```
+
 - Generates 2 recipe variants per prompt (500 prompts/persona)
 - Variant A: Strong persona constraints (temperature=0.7)
 - Variant B: Weak/no constraints (temperature=0.9)
 
 **Stage 2: Label Preferences with Llama 70B**
+
 ```bash
 python groq_choose_preference.py --persona persona_a_korean_spicy
 ```
+
 - Uses Groq API (FREE) with Llama 3.3 70B as judge
 - Labels chosen/rejected based on dietary compliance, cuisine alignment
 - Pass rate: ~80-90% (400-450 pairs/persona)
 
 **Stage 3: DPO Training**
+
 ```bash
 python train_dpo_persona.py --persona persona_a_korean_spicy
 ```
+
 - Hardware: Lambda Labs A100 40GB
 - Cost: ~$0.50-0.80 per persona (~$3-5 total)
 - Time: 30-45 min/persona
 - Output: LoRA adapters (~173MB each)
 
 **Stage 4: Evaluation**
+
 ```bash
 cd ../evaluation/
 python evaluate_dpo_personas.py --project_id YOUR_GCP_PROJECT_ID --personas all
 ```
+
 - 120 test cases (20/persona) evaluated by Gemini 2.0 Flash
 - Cost: ~$0.06 total
 - **Expected Win Rate**: 75.8% (DPO beats SFT)
 
 **Cost Breakdown**:
-| Stage | Service | Cost |
-|-------|---------|------|
-| Variant Generation | Local GPU | FREE |
-| Preference Labeling | Groq (Llama 70B) | FREE |
-| DPO Training | Lambda Labs A100 | ~$3-5 |
-| Evaluation | Vertex AI (Gemini) | ~$0.06 |
-| **Total** | | **~$3-6** |
+
+| Stage               | Service            | Cost            |
+| ------------------- | ------------------ | --------------- |
+| Variant Generation  | Local GPU          | FREE            |
+| Preference Labeling | Groq (Llama 70B)   | FREE            |
+| DPO Training        | Lambda Labs A100   | ~$3-5           |
+| Evaluation          | Vertex AI (Gemini) | ~$0.06          |
+| **Total**     |                    | **~$3-6** |
 
 **Model Storage**:
+
 - **GCS**: `gs://pantrypilot-dpo-models/v1.0/`
 - **Local**: `model_development/training_pipeline/05_dpo_training/trained_models/` (gitignored)
 - **Download**: `./download_dpo_models.sh`
 
 **Data Versioning**:
+
 - DVC tracks: `data/variants/`, `data/preference_pairs/`, `data/dpo_formatted/`
 - Remote: GCS
 
 **Future Enhancements**:
+
 - Automatic retraining based on user feedback threshold
 - Real-time user preference collection via API
 - A/B testing deployment for model validation
@@ -995,8 +1008,11 @@ For scalable and efficient inference of the finetuned Large Language Model (LLM)
 - **Technology**: FastAPI application containerized with Docker, deployed on Google Cloud Run.
 - Automated Deployment: Deployment to Cloud Run is automated via a GitHub Actions workflow (`.github/workflows/deploy_llm.yml`).
 - Details: For comprehensive setup, build, and environment variable configurations, refer to the [model_deployment/README.md](model_deployment/README.md).
-
 - Detailed documentation, flow diagrams, API list, and data model: see [model_deployment/README.md](model_deployment/README.md).
+
+### Cloud Run Video
+
+[Demo Video Link](https://drive.google.com/file/d/1LFeP2v9Wgryn4mrXF7huoIXCo3POPQ5r/view?usp=sharing)
 
 ---
 
@@ -1062,6 +1078,3 @@ From a full MLOps perspective, this project demonstrates:
 - CI hooks to prevent obvious regressions in both pipeline and model evaluation code
 
 Overall, PantryPilot moves from synthetic inventory data → clean, validated tables → LLM-based recipe generation with measured behavior across multiple user segments. That matches the course goal: not just training a model, but integrating it into a reproducible, observable, and evaluable system.
-
-
-

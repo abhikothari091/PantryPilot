@@ -4,7 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 import json
 from datetime import datetime
-import os
+import os 
 import time
 import base64
 
@@ -144,7 +144,7 @@ def _sanitize_recipe(recipe_json: dict) -> dict:
 VIDEO_GEN_ENABLED = os.getenv("VIDEO_GEN_ENABLED", "false").lower() == "true"
 # Additional guard: require explicit opt-in for live video generation
 VIDEO_GEN_ALLOW_LIVE = os.getenv("VIDEO_GEN_ALLOW_LIVE", "false").lower() == "true"
-VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1")  # Use non-preview for longer clips
+VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1-generate-001")  # Use non-preview for longer clips
 VIDEO_GEN_API_KEY = os.getenv("VIDEO_GEN_API_KEY")
 VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "180"))  # Increased for production
 VIDEO_GEN_POLL_SECONDS = int(os.getenv("VIDEO_GEN_POLL_SECONDS", "10"))  # Match official docs

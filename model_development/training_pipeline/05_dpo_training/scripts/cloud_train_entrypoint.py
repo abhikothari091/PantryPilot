@@ -57,13 +57,19 @@ def fetch_data_from_db():
             chosen = row.variant_b_raw
             rejected = row.variant_a_raw
         
-        # Skip records with missing data
-        if not chosen or not rejected or not row.prompt:
+        # Skip records with missing or empty data (None, empty string, or whitespace)
+        if not chosen or not chosen.strip():
+            skipped += 1
+            continue
+        if not rejected or not rejected.strip():
+            skipped += 1
+            continue
+        if not row.prompt or not row.prompt.strip():
             skipped += 1
             continue
             
         ids.append(row.id)
-        dpo_data.append({"prompt": row.prompt, "chosen": chosen, "rejected": rejected})
+        dpo_data.append({"prompt": row.prompt.strip(), "chosen": chosen.strip(), "rejected": rejected.strip()})
 
     if skipped > 0:
         print(f"   Skipped {skipped} records with missing data.")

@@ -144,10 +144,12 @@ def _sanitize_recipe(recipe_json: dict) -> dict:
 VIDEO_GEN_ENABLED = os.getenv("VIDEO_GEN_ENABLED", "false").lower() == "true"
 # Additional guard: require explicit opt-in for live video generation
 VIDEO_GEN_ALLOW_LIVE = os.getenv("VIDEO_GEN_ALLOW_LIVE", "false").lower() == "true"
-VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1-generate-preview")
+VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1")  # Use non-preview for longer clips
 VIDEO_GEN_API_KEY = os.getenv("VIDEO_GEN_API_KEY")
 VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "180"))  # Increased for production
 VIDEO_GEN_POLL_SECONDS = int(os.getenv("VIDEO_GEN_POLL_SECONDS", "10"))  # Match official docs
+VIDEO_GEN_DURATION_SECONDS = int(os.getenv("VIDEO_GEN_DURATION_SECONDS", "25"))  # Target clip length
+VIDEO_GEN_GENERATE_AUDIO = os.getenv("VIDEO_GEN_GENERATE_AUDIO", "true").lower() == "true"
 VIDEO_FALLBACK_URL = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
 # Import Google GenAI following official documentation pattern
@@ -446,13 +448,19 @@ def generate_recipe_video(body: VideoGenerateRequest):
     video_url = VIDEO_FALLBACK_URL
     mode = "mock"
 
-    # Rich, guided prompt to encourage stepwise cooking visuals
+    target_duration = VIDEO_GEN_DURATION_SECONDS
+
+    # Rich, guided prompt to encourage stepwise cooking visuals with narration
     detailed_prompt = (
-        "Create a 20-second cooking video for the dish below. "
-        "Show clear, sequential steps (Step 1, Step 2, Step 3) with close-ups of ingredients, pan actions, "
-        "and a final plated hero shot. Natural lighting, no text overlays, no voiceover. "
-        "Keep pacing brisk and visually coherent.\n\n"
-        f"Dish details: {prompt}"
+        f"Create a cooking video approximately {target_duration} seconds long (do NOT exceed {target_duration} seconds). "
+        "The video should be vertical 9:16, shot in a clean, modern home kitchen. "
+        "Begin with a 1–2 second overhead shot showing all required ingredients on the counter, "
+        "then show clear, sequential cooking actions that follow the recipe steps exactly in order "
+        "(Step 1, Step 2, etc.), without inventing any extra ingredients or steps. "
+        "Use close-ups for chopping, stirring, and pan cooking, then end with a 2–3 second hero shot of the finished dish on a plate. "
+        "Include a concise voiceover narration synced to each step, no background music, and NO on-screen text. "
+        "Show only hands and utensils (no faces), keep the lighting bright and natural, and make the pacing brisk but easy to follow.\n\n"
+        f"Dish details and recipe JSON:\n{prompt}"
     )
 
     # Require explicit allow flag to enable live generation
@@ -460,14 +468,21 @@ def generate_recipe_video(body: VideoGenerateRequest):
         try:
             print(f"🎬 Starting video generation with model: {VIDEO_GEN_MODEL}")
             print(f"📝 Prompt: {detailed_prompt[:200]}...")
+            print(f"⏱️ Target duration: {target_duration}s | Audio: {VIDEO_GEN_GENERATE_AUDIO}")
             
             # Initialize client following official documentation
             client = genai.Client(api_key=VIDEO_GEN_API_KEY)
+
+            video_config = genai.types.GenerateVideosConfig(
+                duration_seconds=target_duration,
+                generate_audio=VIDEO_GEN_GENERATE_AUDIO,
+            )
             
             # Start video generation (async operation)
             operation = client.models.generate_videos(
                 model=VIDEO_GEN_MODEL,
                 prompt=detailed_prompt,
+                config=video_config,
             )
             print(f"📊 Operation started: {operation.name if hasattr(operation, 'name') else 'unknown'}")
 

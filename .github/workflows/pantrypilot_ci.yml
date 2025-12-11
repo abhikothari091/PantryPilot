@@ -95,6 +95,15 @@ jobs:
         working-directory: data_pipeline
         run: |
           pytest -q || echo "Data pipeline tests failed or missing. Please adjust test paths if needed."
+        
+      # ---- New Automation Script Checks ----
+      - name: Syntax check for automation scripts
+        run: |
+          python -m py_compile data_pipeline/scripts/dpo_monitor.py
+          # Check auto_retrain_pipeline.py if model dev requirements are installed
+          if [ -f model_development/requirements.txt ]; then
+             python -m py_compile model_development/training_pipeline/05_dpo_training/scripts/auto_retrain_pipeline.py
+          fi
 
       # ---- Quick LLM eval regression check ----
       - name: Run model eval (small sanity subset)

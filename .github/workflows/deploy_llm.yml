@@ -56,4 +56,4 @@ jobs:
           --min-instances=0 \
           --max-instances=1 \
           --no-gpu-zonal-redundancy \
-          --set-env-vars=HF_TOKEN=${{ secrets.HF_TOKEN }}
+          --set-env-vars=HF_TOKEN=${{ secrets.HF_TOKEN }},DPO_FUNCTION_URL=${{ secrets.DPO_FUNCTION_URL }}

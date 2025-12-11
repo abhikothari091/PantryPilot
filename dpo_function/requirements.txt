@@ -1,0 +1,17 @@
+# Required by Google Cloud Functions
+functions-framework==3.*
+
+# Database and GCS
+psycopg2-binary
+google-cloud-storage
+db-dtypes
+
+# ML/DPO Training Dependencies
+# Add the specific versions you intend to use.
+torch
+transformers
+peft
+trl
+accelerate
+datasets
+bitsandbytes

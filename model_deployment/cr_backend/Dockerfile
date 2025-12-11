@@ -15,5 +15,11 @@ COPY . .
 
 EXPOSE 7860
 
-CMD gcloud storage cp -r gs://pantrypilot-bucket/llama3b_lambda_lora /app/models/ && \
+CMD mkdir -p /app/models && \
+    if gcloud storage ls gs://${GCS_BUCKET_NAME}/llama3b_lambda_lora >/dev/null 2>&1; then \
+    gcloud storage cp -r gs://${GCS_BUCKET_NAME}/llama3b_lambda_lora /app/models/; \
+    else \
+    echo "WARNING: Model not found in GCS. Starting without pre-loaded model."; \
+    mkdir -p /app/models/llama3b_lambda_lora; \
+    fi && \
     uvicorn main:app --host 0.0.0.0 --port 7860

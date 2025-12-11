@@ -3,16 +3,18 @@ Training Router - Handles retraining approval workflow.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from datetime import datetime
 from typing import List
 
 from database import get_db
 from dependencies import get_current_user
-from models import User, UserProfile, RecipePreference
+from models import User, RecipePreference
+from services import dpo_training_service
 
 router = APIRouter(prefix="/training", tags=["training"])
 
+MIN_PREFERENCES_FOR_TRAINING = 50
 
 @router.get("/pending")
 def get_pending_retraining_requests(
@@ -20,28 +22,24 @@ def get_pending_retraining_requests(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get users who have reached the preference threshold (50+).
+    Get users who have reached the preference threshold.
     Admin endpoint to see who is eligible for retraining.
     """
-    # Check if admin
     if current_user.username != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Get all users with 50+ preferences
-    threshold = 50
-    
-    # Query users with their preference counts
     from sqlalchemy import func
     
     results = db.query(
         RecipePreference.user_id,
         func.count(RecipePreference.id).label('count')
     ).filter(
-        RecipePreference.skipped == False  # Only count actual choices
+        RecipePreference.skipped == False,
+        RecipePreference.chosen_variant.isnot(None)
     ).group_by(
         RecipePreference.user_id
     ).having(
-        func.count(RecipePreference.id) >= threshold
+        func.count(RecipePreference.id) >= MIN_PREFERENCES_FOR_TRAINING
     ).all()
     
     pending_users = []
@@ -57,57 +55,41 @@ def get_pending_retraining_requests(
             })
     
     return {
-        "threshold": threshold,
+        "threshold": MIN_PREFERENCES_FOR_TRAINING,
         "pending_count": len(pending_users),
         "users": pending_users
     }
 
 
-@router.post("/approve/{user_id}")
+@router.get("/approve/{user_id}", response_class=HTMLResponse)
 def approve_retraining(
     user_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    Approve retraining for a specific user.
-    This endpoint is called when admin clicks the approval link in Slack.
-    
-    Note: This doesn't automatically trigger training - it logs the approval
-    for manual training execution on Lambda Labs.
+    Approve and trigger DPO retraining for a specific user.
+    This endpoint is called when an admin clicks the approval link in Slack.
     """
-    # Get user
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return HTMLResponse(content="<h1>Error: User not found</h1>", status_code=404)
+
+    # 1. Fetch and format data using the service
+    training_data = dpo_training_service.get_dpo_training_data(db, user_id)
     
-    # Get preference count
-    preference_count = db.query(RecipePreference).filter(
-        RecipePreference.user_id == user_id,
-        RecipePreference.skipped == False
-    ).count()
-    
-    if preference_count < 50:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"User has only {preference_count} preferences. Minimum 50 required."
+    if len(training_data) < MIN_PREFERENCES_FOR_TRAINING:
+        return HTMLResponse(
+            content=f"<h1>Error: Not enough data</h1><p>User {user.username} has only {len(training_data)} preferences. Minimum {MIN_PREFERENCES_FOR_TRAINING} required.</p>",
+            status_code=400
         )
-    
-    # Log approval (in production, this would update a RetrainingRequest table)
-    approval_log = {
-        "user_id": user_id,
-        "username": user.username,
-        "preference_count": preference_count,
-        "approved_at": datetime.utcnow().isoformat(),
-        "status": "approved",
-        "message": f"Retraining approved for user {user.username}. "
-                   f"Export preferences and run DPO training on Lambda Labs."
-    }
-    
-    print(f"[TRAINING] Approved retraining for user {user.username} (ID: {user_id})")
-    print(f"[TRAINING] Preference count: {preference_count}")
-    print(f"[TRAINING] Run: python train_dpo_persona.py --user_id {user_id}")
-    
-    return approval_log
+
+    # 2. Trigger the Lambda function
+    result = dpo_training_service.trigger_dpo_lambda(user.id, user.username, training_data)
+
+    if result["status"] == "success":
+        return HTMLResponse(content=f"<h1>Retraining Initiated</h1><p>DPO retraining for user <b>{user.username}</b> (ID: {user.id}) has been successfully triggered.</p><p>Preference pairs sent: {len(training_data)}</p>")
+    else:
+        return HTMLResponse(content=f"<h1>Error</h1><p>Failed to trigger retraining for user {user.username}.</p><p>Reason: {result['message']}</p>", status_code=500)
 
 
 @router.get("/export/{user_id}")
@@ -117,35 +99,18 @@ def export_user_preferences(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Export a user's preferences in DPO training format.
+    Export a user's preferences in DPO training format using the centralized service.
     Admin endpoint for preparing training data.
     """
-    # Check if admin
     if current_user.username != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Get user
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Get preferences
-    preferences = db.query(RecipePreference).filter(
-        RecipePreference.user_id == user_id,
-        RecipePreference.skipped == False
-    ).all()
-    
-    # Format for DPO training
-    dpo_pairs = []
-    for pref in preferences:
-        if pref.chosen_variant and pref.rejected_variant:
-            dpo_pairs.append({
-                "prompt": pref.prompt,
-                "chosen": pref.chosen_variant,
-                "rejected": pref.rejected_variant,
-                "generation_number": pref.generation_number,
-                "created_at": pref.created_at.isoformat() if pref.created_at else None
-            })
+    # Use the centralized service to get data
+    dpo_pairs = dpo_training_service.get_dpo_training_data(db, user_id)
     
     return {
         "user_id": user_id,

@@ -6,6 +6,10 @@ from scripts.config import DB_URL
 # Threshold for approval rate alert (80%)
 APPROVAL_RATE_THRESHOLD = 0.80
 
+# Minimum number of feedback required before calculating approval rate
+# (to avoid alerts on statistically insignificant sample sizes)
+MIN_FEEDBACK_COUNT = 10
+
 # Function to check for new preference pairs
 def check_new_pairs():
     engine = create_engine(DB_URL)
@@ -119,7 +123,11 @@ if __name__ == "__main__":
     
     # Check approval rate (quality monitoring)
     approval_rate, likes, dislikes = check_approval_rate(days=7)
-    if approval_rate is not None and approval_rate < APPROVAL_RATE_THRESHOLD:
+    total_feedback = likes + dislikes
+    
+    if total_feedback < MIN_FEEDBACK_COUNT:
+        print(f"[Approval Monitor] Only {total_feedback} feedback (minimum: {MIN_FEEDBACK_COUNT}). Skipping approval rate check.")
+    elif approval_rate is not None and approval_rate < APPROVAL_RATE_THRESHOLD:
         send_low_approval_alert(approval_rate, likes, dislikes, days=7)
     elif approval_rate is not None:
         print(f"[Approval Monitor] Approval rate {approval_rate:.1%} is above threshold. No alert needed.")

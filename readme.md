@@ -3,7 +3,6 @@
 **Group 16 · Personalized Grocery Forecasting & Constraint-Aware Recipe Assistant**
 
 ![Tests](https://github.com/abhikothari091/PantryPilot/workflows/Tests/badge.svg)
-[![codecov](https://codecov.io/gh/abhikothari091/PantryPilot/branch/main/graph/badge.svg)](https://codecov.io/gh/abhikothari091/PantryPilot)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![React](https://img.shields.io/badge/react-19.2-blue)
 ![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen)
@@ -1128,3 +1127,4 @@ From a full MLOps perspective, this project demonstrates:
 - CI hooks to prevent obvious regressions in both pipeline and model evaluation code
 
 Overall, PantryPilot moves from synthetic inventory data → clean, validated tables → LLM-based recipe generation with measured behavior across multiple user segments. That matches the course goal: not just training a model, but integrating it into a reproducible, observable, and evaluable system.
+

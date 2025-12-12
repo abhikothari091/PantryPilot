@@ -149,7 +149,6 @@ VIDEO_GEN_API_KEY = os.getenv("VIDEO_GEN_API_KEY")
 VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "180"))  # Increased for production
 VIDEO_GEN_POLL_SECONDS = int(os.getenv("VIDEO_GEN_POLL_SECONDS", "10"))  # Match official docs
 VIDEO_GEN_DURATION_SECONDS = int(os.getenv("VIDEO_GEN_DURATION_SECONDS", "25"))  # Target clip length
-VIDEO_GEN_GENERATE_AUDIO = os.getenv("VIDEO_GEN_GENERATE_AUDIO", "true").lower() == "true"
 VIDEO_FALLBACK_URL = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
 # Import Google GenAI following official documentation pattern
@@ -468,14 +467,13 @@ def generate_recipe_video(body: VideoGenerateRequest):
         try:
             print(f"🎬 Starting video generation with model: {VIDEO_GEN_MODEL}")
             print(f"📝 Prompt: {detailed_prompt[:200]}...")
-            print(f"⏱️ Target duration: {target_duration}s | Audio: {VIDEO_GEN_GENERATE_AUDIO}")
+            print(f"⏱️ Target duration: {target_duration}s")
             
             # Initialize client following official documentation
             client = genai.Client(api_key=VIDEO_GEN_API_KEY)
 
             video_config = genai.types.GenerateVideosConfig(
-                duration_seconds=target_duration,
-                generate_audio=VIDEO_GEN_GENERATE_AUDIO,
+                duration_seconds=target_duration
             )
             
             # Start video generation (async operation)

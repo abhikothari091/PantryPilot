@@ -734,12 +734,14 @@ gcloud run jobs execute pantrypilot-training-job --region=us-central1
 ```
 
 **Key Features:**
+
 - **Slack Integration**: Approve button triggers training job
 - **Iterative Training**: Each training builds on the previous version's weights
 - **Version Control**: Models saved with timestamps (`v20241211_120000`)
 - **GPU Acceleration**: NVIDIA L4 GPU for faster training
 
 **GCS Buckets:**
+
 | Bucket | Purpose |
 |--------|---------|
 | `gs://pantrypilot-dpo-models` | Trained model weights (versioned) |
@@ -747,6 +749,67 @@ gcloud run jobs execute pantrypilot-training-job --region=us-central1
 | `gs://recipegen-llm-models` | Original LoRA adapter (base) |
 
 See [model_development/training_pipeline/05_dpo_training/README.md](model_development/training_pipeline/05_dpo_training/README.md) for detailed instructions.
+
+#### 7. Real-time Slack Monitoring & Alerts 📊
+
+We implemented comprehensive real-time monitoring via Slack to detect model quality issues and enable proactive intervention.
+
+**Three Types of Alerts:**
+
+| Alert Type | Trigger | Check Frequency |
+|------------|---------|-----------------|
+| **DPO Training Ready** | 50+ new preference pairs | Batch (scheduled) |
+| **Low Approval Rate** | Like/(Like+Dislike) < 80% | Batch (scheduled) |
+| **Consecutive Dislikes** | User gives 5 dislikes in a row | **Real-time** |
+
+**Consecutive Dislike Alert (Real-time):**
+
+When a user submits a dislike, the system immediately checks their last 5 feedback entries. If all are dislikes, a Slack alert is triggered:
+
+![Slack Consecutive Dislike Alert](image/readme/slack_consecutive_dislike_alert.png)
+
+**Implementation:**
+
+```python
+# model_deployment/backend/routers/recipes.py
+@router.post("/{history_id}/feedback")
+def submit_feedback(...):
+    entry.feedback_score = body.score
+    db.commit()
+    
+    # Real-time check for consecutive dislikes (per-user)
+    if body.score == 1:  # Dislike
+        _check_consecutive_dislikes_realtime(db, current_user.id, current_user.username)
+```
+
+**DPO Training Logs (Cloud Run Job):**
+
+When training is triggered, the Cloud Run Job executes DPO training and saves model weights to GCS:
+
+![DPO Training Logs](image/readme/dpo_training_logs.png)
+
+**Configuration:**
+
+| Environment Variable | Purpose |
+|---------------------|---------|
+| `SLACK_WEBHOOK_URL` | Slack Incoming Webhook URL |
+| `DATABASE_URL` | NeonDB connection string |
+
+**Monitoring Scripts:**
+
+```bash
+# Run batch monitoring (DPO pair count + approval rate)
+cd data_pipeline
+python -m scripts.dpo_monitor
+```
+
+**Thresholds (configurable in `dpo_monitor.py`):**
+
+```python
+APPROVAL_RATE_THRESHOLD = 0.80      # 80% like rate
+MIN_FEEDBACK_COUNT = 10             # Minimum feedback before checking rate
+CONSECUTIVE_DISLIKE_THRESHOLD = 5   # Consecutive dislikes per user
+```
 
 ### B. Model Artifacts & Storage
 
@@ -1127,4 +1190,3 @@ From a full MLOps perspective, this project demonstrates:
 - CI hooks to prevent obvious regressions in both pipeline and model evaluation code
 
 Overall, PantryPilot moves from synthetic inventory data → clean, validated tables → LLM-based recipe generation with measured behavior across multiple user segments. That matches the course goal: not just training a model, but integrating it into a reproducible, observable, and evaluable system.
-

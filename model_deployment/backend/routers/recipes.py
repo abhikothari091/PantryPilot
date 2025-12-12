@@ -144,7 +144,8 @@ def _sanitize_recipe(recipe_json: dict) -> dict:
 VIDEO_GEN_ENABLED = os.getenv("VIDEO_GEN_ENABLED", "false").lower() == "true"
 # Additional guard: require explicit opt-in for live video generation
 VIDEO_GEN_ALLOW_LIVE = os.getenv("VIDEO_GEN_ALLOW_LIVE", "false").lower() == "true"
-VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", "veo-3.1-generate-001")  # Use non-preview for longer clips
+VIDEO_GEN_MODEL_DEFAULT = "veo-2.0-generate-001"  # SDK sample; supported for predictLongRunning
+VIDEO_GEN_MODEL = os.getenv("VIDEO_GEN_MODEL", VIDEO_GEN_MODEL_DEFAULT)
 VIDEO_GEN_API_KEY = os.getenv("VIDEO_GEN_API_KEY")
 VIDEO_GEN_TIMEOUT = int(os.getenv("VIDEO_GEN_TIMEOUT", "180"))  # Increased for production
 VIDEO_GEN_POLL_SECONDS = int(os.getenv("VIDEO_GEN_POLL_SECONDS", "10"))  # Match official docs
@@ -153,9 +154,12 @@ VIDEO_FALLBACK_URL = "https://storage.googleapis.com/gtv-videos-bucket/sample/Bi
 
 # Import Google GenAI following official documentation pattern
 genai = None
+genai_errors = None
 try:
     from google import genai as google_genai
+    from google.genai import errors as google_genai_errors
     genai = google_genai
+    genai_errors = google_genai_errors
 except ImportError:
     pass
 
@@ -463,28 +467,27 @@ def generate_recipe_video(body: VideoGenerateRequest):
     )
 
     # Require explicit allow flag to enable live generation
-    if VIDEO_GEN_ENABLED and VIDEO_GEN_ALLOW_LIVE and genai and VIDEO_GEN_API_KEY:
-        try:
-            print(f"🎬 Starting video generation with model: {VIDEO_GEN_MODEL}")
+    live_allowed = VIDEO_GEN_ENABLED and VIDEO_GEN_ALLOW_LIVE and genai and VIDEO_GEN_API_KEY
+    if live_allowed:
+        def _generate_with_model(model_name: str):
+            print(f"🎬 Starting video generation with model: {model_name}")
             print(f"📝 Prompt: {detailed_prompt[:200]}...")
             print(f"⏱️ Target duration: {target_duration}s")
-            
-            # Initialize client following official documentation
+
             client = genai.Client(api_key=VIDEO_GEN_API_KEY)
 
             video_config = genai.types.GenerateVideosConfig(
                 duration_seconds=target_duration
             )
-            
-            # Start video generation (async operation)
+            video_source = genai.types.GenerateVideosSource(prompt=detailed_prompt)
+
             operation = client.models.generate_videos(
-                model=VIDEO_GEN_MODEL,
-                prompt=detailed_prompt,
+                model=model_name,
+                source=video_source,
                 config=video_config,
             )
             print(f"📊 Operation started: {operation.name if hasattr(operation, 'name') else 'unknown'}")
 
-            # Poll until video is ready (following official docs pattern)
             start_time = time.time()
             poll_count = 0
             while not operation.done:
@@ -497,10 +500,8 @@ def generate_recipe_video(body: VideoGenerateRequest):
                 print(f"⏳ Waiting for video... (poll #{poll_count}, {elapsed:.0f}s elapsed)")
                 time.sleep(VIDEO_GEN_POLL_SECONDS)
                 
-                # Refresh operation status (per official docs)
                 operation = client.operations.get(operation)
 
-            # Extract video URL from completed operation
             if operation.response and operation.response.generated_videos:
                 generated_video = operation.response.generated_videos[0]
                 video_obj = getattr(generated_video, "video", None)
@@ -510,31 +511,52 @@ def generate_recipe_video(body: VideoGenerateRequest):
 
                 if video_obj:
                     try:
-                        # Download the bytes using the official helper and embed as data URL for reliable playback
                         video_bytes = client.files.download(file=video_obj)
                         b64 = base64.b64encode(video_bytes).decode("ascii")
-                        video_url = f"data:{mime_type};base64,{b64}"
-                        mode = "live"
                         print(f"✅ Video generated successfully ({mime_type}), size={len(video_bytes)} bytes")
+                        return f"data:{mime_type};base64,{b64}", "live"
                     except Exception as download_exc:
                         print(f"⚠️ Video download failed: {type(download_exc).__name__}: {download_exc}")
-                        # Fallback to raw URI if provided
                         if getattr(video_obj, "uri", None):
-                            video_url = video_obj.uri
-                            mode = "live"
                             print("ℹ️ Using video URI directly.")
-                        else:
-                            print("⚠️ No usable video URI; using fallback.")
+                            return video_obj.uri, "live"
+                        print("⚠️ No usable video URI; using fallback.")
             else:
                 print("⚠️ No video in response, using fallback")
-                
-        except HTTPException:
-            raise
-        except Exception as e:
-            # Silent fallback keeps the front end stable
-            print(f"❌ Video generation failed: {type(e).__name__}: {e}")
+            return VIDEO_FALLBACK_URL, "mock"
+
+        # Try env model first, then fall back to known-good default if NOT_FOUND
+        attempted_models = [m for m in [VIDEO_GEN_MODEL, VIDEO_GEN_MODEL_DEFAULT] if m]
+        last_error = None
+        for idx, model_name in enumerate(attempted_models):
+            try:
+                video_url, mode = _generate_with_model(model_name)
+                break
+            except HTTPException:
+                raise
+            except Exception as e:
+                last_error = e
+                msg = str(e)
+                if genai_errors and isinstance(e, genai_errors.ClientError) and "NOT_FOUND" in msg:
+                    if model_name != VIDEO_GEN_MODEL_DEFAULT and idx + 1 < len(attempted_models):
+                        print(f"⚠️ Model {model_name} not found for this API version; retrying with {VIDEO_GEN_MODEL_DEFAULT}")
+                        continue
+                print(f"❌ Video generation failed: {type(e).__name__}: {e}")
+                video_url = VIDEO_FALLBACK_URL
+                mode = "mock"
+                break
+        else:
+            # No models attempted successfully
+            print(f"❌ Video generation failed: {type(last_error).__name__ if last_error else 'UnknownError'}: {last_error}")
             video_url = VIDEO_FALLBACK_URL
             mode = "mock"
+    else:
+        print(
+            "🎥 Video generation skipped: "
+            f"enabled={VIDEO_GEN_ENABLED}, allow_live={VIDEO_GEN_ALLOW_LIVE}, "
+            f"api_key={'set' if VIDEO_GEN_API_KEY else 'missing'}, "
+            f"genai_imported={bool(genai)}"
+        )
 
     return {"status": "success", "video_url": video_url, "mode": mode}
 

@@ -361,28 +361,29 @@ def submit_feedback(
     entry.feedback_score = body.score
     db.commit()
     
-    # Real-time check for consecutive dislikes
+    # Real-time check for consecutive dislikes (per-user)
     if body.score == 1:  # Dislike
-        _check_consecutive_dislikes_realtime(db)
+        _check_consecutive_dislikes_realtime(db, current_user.id, current_user.username)
     
     return {"status": "success"}
 
 
-def _check_consecutive_dislikes_realtime(db: Session, threshold: int = 5):
+def _check_consecutive_dislikes_realtime(db: Session, user_id: int, username: str, threshold: int = 5):
     """
-    Check if the last N feedback entries are all dislikes.
+    Check if the last N feedback entries for a specific user are all dislikes.
     Sends Slack alert if consecutive dislike streak is detected.
     """
     import os
     import requests
     
-    # Get the last N feedback entries
+    # Get the last N feedback entries for THIS USER only
     recent_feedback = db.query(RecipeHistory).filter(
+        RecipeHistory.user_id == user_id,
         RecipeHistory.feedback_score.in_([1, 2])
     ).order_by(RecipeHistory.created_at.desc()).limit(threshold).all()
     
     if len(recent_feedback) < threshold:
-        return  # Not enough data
+        return  # Not enough data for this user
     
     # Check if all are dislikes (feedback_score = 1)
     all_dislikes = all(f.feedback_score == 1 for f in recent_feedback)
@@ -391,7 +392,7 @@ def _check_consecutive_dislikes_realtime(db: Session, threshold: int = 5):
         return
     
     # Send Slack alert
-    print(f"[ALERT] Detected {threshold} consecutive dislikes!")
+    print(f"[ALERT] User '{username}' (ID: {user_id}) has {threshold} consecutive dislikes!")
     
     webhook_url = os.getenv("SLACK_WEBHOOK_URL")
     if not webhook_url:
@@ -401,13 +402,13 @@ def _check_consecutive_dislikes_realtime(db: Session, threshold: int = 5):
     message = {
         "text": (
             f"🚨 *PantryPilot Consecutive Dislike Alert* 🚨\n\n"
-            f"Detected *{threshold} consecutive dislikes* in real-time!\n\n"
-            f"⚠️ This indicates a potential quality issue with recent model outputs.\n\n"
-            f"🔍 *Immediate Actions:*\n"
-            f"1. Check the last {threshold} generated recipes for quality\n"
-            f"2. Review if there's a specific pattern (cuisine, preference, etc.)\n"
-            f"3. Consider rolling back to a previous model version\n"
-            f"4. Investigate recent model/data changes"
+            f"User *{username}* has given *{threshold} consecutive dislikes*!\n\n"
+            f"⚠️ This user may be experiencing quality issues.\n\n"
+            f"🔍 *Recommended Actions:*\n"
+            f"1. Review this user's recent recipe generations\n"
+            f"2. Check their preferences and dietary restrictions\n"
+            f"3. Consider reaching out for feedback\n"
+            f"4. Check if there's a personalization issue"
         )
     }
     

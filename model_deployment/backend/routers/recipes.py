@@ -360,7 +360,65 @@ def submit_feedback(
     
     entry.feedback_score = body.score
     db.commit()
+    
+    # Real-time check for consecutive dislikes
+    if body.score == 1:  # Dislike
+        _check_consecutive_dislikes_realtime(db)
+    
     return {"status": "success"}
+
+
+def _check_consecutive_dislikes_realtime(db: Session, threshold: int = 5):
+    """
+    Check if the last N feedback entries are all dislikes.
+    Sends Slack alert if consecutive dislike streak is detected.
+    """
+    import os
+    import requests
+    
+    # Get the last N feedback entries
+    recent_feedback = db.query(RecipeHistory).filter(
+        RecipeHistory.feedback_score.in_([1, 2])
+    ).order_by(RecipeHistory.created_at.desc()).limit(threshold).all()
+    
+    if len(recent_feedback) < threshold:
+        return  # Not enough data
+    
+    # Check if all are dislikes (feedback_score = 1)
+    all_dislikes = all(f.feedback_score == 1 for f in recent_feedback)
+    
+    if not all_dislikes:
+        return
+    
+    # Send Slack alert
+    print(f"[ALERT] Detected {threshold} consecutive dislikes!")
+    
+    webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+    if not webhook_url:
+        print("[Warning] SLACK_WEBHOOK_URL not set. Skipping real-time alert.")
+        return
+    
+    message = {
+        "text": (
+            f"🚨 *PantryPilot Consecutive Dislike Alert* 🚨\n\n"
+            f"Detected *{threshold} consecutive dislikes* in real-time!\n\n"
+            f"⚠️ This indicates a potential quality issue with recent model outputs.\n\n"
+            f"🔍 *Immediate Actions:*\n"
+            f"1. Check the last {threshold} generated recipes for quality\n"
+            f"2. Review if there's a specific pattern (cuisine, preference, etc.)\n"
+            f"3. Consider rolling back to a previous model version\n"
+            f"4. Investigate recent model/data changes"
+        )
+    }
+    
+    try:
+        response = requests.post(webhook_url, json=message, timeout=5)
+        if response.status_code == 200:
+            print("[ALERT] Slack notification sent successfully.")
+        else:
+            print(f"[Error] Failed to send Slack alert: {response.status_code}")
+    except Exception as e:
+        print(f"[Error] Failed to send Slack alert: {e}")
 
 @router.post("/{recipe_id}/cooked")
 def mark_recipe_cooked(recipe_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

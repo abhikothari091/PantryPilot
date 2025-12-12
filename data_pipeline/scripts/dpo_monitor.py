@@ -10,6 +10,9 @@ APPROVAL_RATE_THRESHOLD = 0.80
 # (to avoid alerts on statistically insignificant sample sizes)
 MIN_FEEDBACK_COUNT = 10
 
+# Number of consecutive dislikes that triggers an alert
+CONSECUTIVE_DISLIKE_THRESHOLD = 5
+
 # Function to check for new preference pairs
 def check_new_pairs():
     engine = create_engine(DB_URL)
@@ -64,6 +67,70 @@ def check_approval_rate(days: int = 7):
     approval_rate = likes / total
     print(f"[Approval Monitor] Last {days} days: {likes} likes, {dislikes} dislikes, rate={approval_rate:.2%}")
     return approval_rate, likes, dislikes
+
+
+def check_consecutive_dislikes(threshold: int = CONSECUTIVE_DISLIKE_THRESHOLD):
+    """
+    Check if the last N feedback entries are all dislikes (feedback_score = 1).
+    
+    Returns:
+        tuple: (has_consecutive_dislikes, count, last_entries)
+    """
+    engine = create_engine(DB_URL)
+    
+    # Get the last N feedback entries ordered by created_at descending
+    query = text("""
+        SELECT feedback_score, created_at
+        FROM recipe_history 
+        WHERE feedback_score IN (1, 2)
+        ORDER BY created_at DESC
+        LIMIT :threshold
+    """)
+    
+    with engine.begin() as connection:
+        result = connection.execute(query, {"threshold": threshold})
+        rows = result.fetchall()
+    
+    if len(rows) < threshold:
+        print(f"[Consecutive Monitor] Not enough feedback ({len(rows)}/{threshold}). Skipping check.")
+        return False, len(rows), []
+    
+    # Check if all entries are dislikes (feedback_score = 1)
+    all_dislikes = all(row[0] == 1 for row in rows)
+    
+    if all_dislikes:
+        print(f"[Consecutive Monitor] ⚠️ Found {threshold} consecutive dislikes!")
+    else:
+        print(f"[Consecutive Monitor] No consecutive dislike streak detected.")
+    
+    return all_dislikes, len(rows), rows
+
+
+def send_consecutive_dislike_alert(count: int):
+    """Send Slack alert when consecutive dislikes are detected."""
+    webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+    if not webhook_url:
+        print("[Warning] SLACK_WEBHOOK_URL not set. Skipping alert.")
+        return
+
+    message = {
+        "text": (
+            f"🚨 *PantryPilot Consecutive Dislike Alert* 🚨\n\n"
+            f"Detected *{count} consecutive dislikes*!\n\n"
+            f"⚠️ This indicates a potential quality issue with recent model outputs.\n\n"
+            f"🔍 *Immediate Actions:*\n"
+            f"1. Check the last {count} generated recipes for quality\n"
+            f"2. Review if there's a specific pattern (cuisine, preference, etc.)\n"
+            f"3. Consider rolling back to a previous model version\n"
+            f"4. Investigate recent model/data changes"
+        )
+    }
+    
+    response = requests.post(webhook_url, json=message)
+    if response.status_code == 200:
+        print("[Consecutive Monitor] Slack alert sent successfully.")
+    else:
+        print(f"[Error] Failed to send Slack alert: {response.status_code} {response.text}")
 
 
 def send_low_approval_alert(approval_rate: float, likes: int, dislikes: int, days: int = 7):
@@ -131,3 +198,8 @@ if __name__ == "__main__":
         send_low_approval_alert(approval_rate, likes, dislikes, days=7)
     elif approval_rate is not None:
         print(f"[Approval Monitor] Approval rate {approval_rate:.1%} is above threshold. No alert needed.")
+    
+    # Check for consecutive dislikes (real-time quality issue detection)
+    has_consecutive, count, _ = check_consecutive_dislikes()
+    if has_consecutive:
+        send_consecutive_dislike_alert(count)

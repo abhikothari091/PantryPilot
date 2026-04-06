@@ -8,6 +8,25 @@ import json
 from typing import List, Dict, Optional
 import os
 
+# Hidden gluten sources not obvious from ingredient names alone
+HIDDEN_GLUTEN_BLOCKLIST = [
+    "soy sauce",
+    "wheat starch",
+    "malt vinegar",
+    "barley malt",
+    "regular oats",
+    "seitan",
+    "teriyaki sauce",
+    "hoisin sauce",
+    "oyster sauce",
+    "worcestershire sauce",
+    "malt extract",
+    "spelt",
+    "kamut",
+    "farro",
+    "bulgur",
+]
+
 class ModelService:
     def __init__(self):
         """
@@ -69,6 +88,12 @@ class ModelService:
                 strict_restrictions.append("ABSOLUTELY NO animal products (no eggs, dairy, milk, cheese, butter, cream, honey)")
             if any("gluten" in d.lower() for d in dietary):
                 strict_restrictions.append("ABSOLUTELY NO gluten (no wheat, barley, rye, regular pasta, bread, flour)")
+                # Inject hidden-gluten blocklist for celiac/gluten-free users
+                blocklist_str = ", ".join(HIDDEN_GLUTEN_BLOCKLIST)
+                strict_restrictions.append(
+                    f"HIDDEN GLUTEN SOURCES - NEVER USE ANY OF THESE: {blocklist_str}"
+                )
+                print(f"🚫 Gluten-free profile detected — injecting hidden-gluten blocklist: {blocklist_str}")
         
         if allergies:
             allergies_str = ", ".join(allergies)

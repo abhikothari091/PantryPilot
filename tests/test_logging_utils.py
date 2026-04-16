@@ -34,7 +34,7 @@ def test_log_gluten_free_generation_emits_json(caplog):
 
     assert len(caplog.records) == 1
     entry = json.loads(caplog.records[0].message)
-    assert entry["event"] == "gluten_free_recipe_generation"
+    assert "gluten_free_recipe_generation" in entry["event"]
     assert entry["dietary_flag_gluten_free"] is True
     assert entry["blocklist_hit"] is True
     assert entry["flagged_ingredient"] == "soy sauce"
@@ -42,6 +42,12 @@ def test_log_gluten_free_generation_emits_json(caplog):
     assert entry["final_status"] == "retry_clean"
     # user hash must not be the raw id
     assert entry["user_hash"] != "user-99"
+    # emoji fields must be present
+    assert "status_icon" in entry
+    assert "dietary_icon" in entry
+    # retry_clean after a blocklist hit → retry emoji
+    assert entry["status_icon"] == "🔄✅"
+    assert entry["dietary_icon"] == "🌾🚫"
 
 
 def test_log_gluten_free_generation_no_blocklist_hit(caplog):
@@ -60,6 +66,8 @@ def test_log_gluten_free_generation_no_blocklist_hit(caplog):
     assert entry["flagged_ingredient"] is None
     assert entry["retry_triggered"] is False
     assert entry["final_status"] == "ok"
+    assert entry["status_icon"] == "✅"
+    assert entry["dietary_icon"] == "🌾🚫"
 
 
 def test_log_non_gluten_free_request_still_emits(caplog):
@@ -76,6 +84,8 @@ def test_log_non_gluten_free_request_still_emits(caplog):
 
     entry = json.loads(caplog.records[0].message)
     assert entry["dietary_flag_gluten_free"] is False
+    assert entry["dietary_icon"] == "🌾"
+    assert entry["status_icon"] == "✅"
 
 
 def test_log_violation_after_retry(caplog):
@@ -92,3 +102,4 @@ def test_log_violation_after_retry(caplog):
     entry = json.loads(caplog.records[0].message)
     assert entry["final_status"] == "violation_after_retry"
     assert entry["flagged_ingredient"] == "wheat starch"
+    assert entry["status_icon"] == "🚨"

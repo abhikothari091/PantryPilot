@@ -147,27 +147,127 @@ def test_inventory_items(test_db, test_user):
     for item in items:
         test_db.add(item)
     test_db.commit()
-    
     return items
 
-@pytest.fixture
-def mock_ocr_response():
-    """Mock OCR API response."""
-    return {
-        "status": "success",
-        "detected_items": [
-            {"item_name": "Milk", "quantity": 1, "unit": "L"},
-            {"item_name": "Bread", "quantity": 2, "unit": "pcs"},
-            {"item_name": "Eggs", "quantity": 12, "unit": "pcs"},
-        ]
-    }
+
+# ---------------------------------------------------------------------------
+# Gluten-free test fixtures
+# ---------------------------------------------------------------------------
+
+# Canonical blocklist — mirrors what Task 1 injected into the system prompt.
+# Update this list if the backend blocklist module changes.
+GLUTEN_BLOCKLIST = [
+    "soy sauce",
+    "wheat starch",
+    "malt vinegar",
+    "barley malt",
+    "regular oats",
+    "seitan",
+    "teriyaki sauce",
+    "wheat flour",
+    "bread crumbs",
+    "panko",
+    "bulgur",
+    "farro",
+    "spelt",
+    "kamut",
+    "triticale",
+    "semolina",
+    "durum",
+    "couscous",
+    "wheat germ",
+    "wheat bran",
+]
+
 
 @pytest.fixture
-def mock_requests(mock_ocr_response):
-    """Mock external HTTP requests."""
-    with patch('requests.post') as mock_post:
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = mock_ocr_response
-        mock_post.return_value = mock_response
-        yield mock_post
+def gluten_free_user(test_db):
+    """Test user whose profile declares gluten-free dietary restriction."""
+    from auth_utils import get_password_hash
+
+    user = User(
+        username="gfuser",
+        email="gfuser@example.com",
+        hashed_password=get_password_hash("gfpass123")
+    )
+    test_db.add(user)
+    test_db.commit()
+    test_db.refresh(user)
+
+    profile = UserProfile(
+        user_id=user.id,
+        dietary_restrictions=["gluten-free"],
+        allergies=[],
+        favorite_cuisines=["Asian", "Mediterranean"]
+    )
+    test_db.add(profile)
+    test_db.commit()
+
+    return user
+
+
+@pytest.fixture
+def gluten_free_auth_headers(gluten_free_user):
+    """Bearer token headers for the gluten-free test user."""
+    token = create_access_token(data={"sub": gluten_free_user.username})
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def gluten_free_inventory(test_db, gluten_free_user):
+    """Inventory stocked with naturally gluten-free ingredients."""
+    items = [
+        InventoryItem(user_id=gluten_free_user.id, item_name="Rice", quantity=2.0, unit="kg", category="pantry"),
+        InventoryItem(user_id=gluten_free_user.id, item_name="Chicken Breast", quantity=1.0, unit="lb", category="meat"),
+        InventoryItem(user_id=gluten_free_user.id, item_name="Broccoli", quantity=0.5, unit="kg", category="produce"),
+        InventoryItem(user_id=gluten_free_user.id, item_name="Olive Oil", quantity=0.3, unit="L", category="pantry"),
+        InventoryItem(user_id=gluten_free_user.id, item_name="Garlic", quantity=0.1, unit="kg", category="produce"),
+        InventoryItem(user_id=gluten_free_user.id, item_name="Tomatoes", quantity=0.5, unit="kg", category="produce"),
+        InventoryItem(user_id=gluten_free_user.id, item_name="Eggs", quantity=6.0, unit="pcs", category="dairy"),
+        InventoryItem(user_id=gluten_free_user.id, item_name="Potatoes", quantity=1.0, unit="kg", category="produce"),
+    ]
+    for item in items:
+        test_db.add(item)
+    test_db.commit()
+    return items
+
+
+def make_clean_gf_recipe(name="Safe GF Recipe", ingredients=None):
+    """Build a recipe JSON string containing no blocklisted ingredients."""
+    if ingredients is None:
+        ingredients = ["rice", "chicken breast", "broccoli", "olive oil", "garlic"]
+    return f'{{
+        "status": "ok",
+        "missing_ingredients": [],
+        "recipe": {{
+            "name": "{name}",
+            "cuisine": "Asian",
+            "culinary_preference": "gluten-free",
+            "time": "30 mins",
+            "main_ingredients": {str(ingredients).replace("'", '"')},
+            "steps": "Step 1. Cook rice. Step 2. Stir-fry chicken with garlic and broccoli. Step 3. Serve.",
+            "note": "All ingredients are gluten-free."
+        }},
+        "shopping_list": []
+    }}'
+
+
+def make_violation_gf_recipe(violating_ingredients):
+    """Build a recipe JSON string that contains one or more blocklisted ingredients."""
+    all_ingredients = ["rice", "chicken breast"] + violating_ingredients
+    ingredients_json = str(all_ingredients).replace("'", '"')
+    steps = "Step 1. Cook rice. Step 2. Add " + ", ".join(violating_ingredients) + ". Step 3. Serve."
+    return f'{{
+        "status": "ok",
+        "missing_ingredients": [],
+        "recipe": {{
+            "name": "Unsafe Recipe",
+            "cuisine": "Asian",
+            "culinary_preference": "none",
+            "time": "25 mins",
+            "main_ingredients": {ingredients_json},
+            "steps": "{steps}",
+            "note": null
+        }},
+        "shopping_list": []
+    }}'

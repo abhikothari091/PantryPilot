@@ -19,6 +19,17 @@ def _anonymize_user_id(user_id: str) -> str:
     return hashlib.sha256(str(user_id).encode()).hexdigest()[:16]
 
 
+def _status_emoji(blocklist_hit: bool, final_status: str) -> str:
+    """Return a descriptive emoji summarising the outcome at a glance."""
+    if final_status == "violation_after_retry":
+        return "🚨"
+    if blocklist_hit and final_status == "retry_clean":
+        return "🔄✅"
+    if blocklist_hit:
+        return "⚠️"
+    return "✅"
+
+
 def log_gluten_free_generation(
     user_id: str,
     is_gluten_free: bool,
@@ -38,7 +49,9 @@ def log_gluten_free_generation(
         final_status: Outcome string, e.g. "ok", "violation_after_retry", "retry_clean".
     """
     entry = {
-        "event": "gluten_free_recipe_generation",
+        "event": "🍽️ gluten_free_recipe_generation",
+        "status_icon": _status_emoji(blocklist_hit, final_status),
+        "dietary_icon": "🌾🚫" if is_gluten_free else "🌾",
         "user_hash": _anonymize_user_id(user_id),
         "dietary_flag_gluten_free": is_gluten_free,
         "blocklist_hit": blocklist_hit,

@@ -11,38 +11,40 @@ BuildRight will automatically process your command, analyze the scope, and push 
 
 ---
 
-## 🚫 Hidden-Gluten Blocklist — Feature Summary
+## 🚫 Feature: Hidden-Gluten Blocklist & System Prompt Injection
 
-### What was changed
-This PR adds a static **hidden-gluten ingredient blocklist** to `model_deployment/backend/model_service.py` and injects it into the LLM system prompt whenever a user's dietary profile includes a gluten-free restriction.
+### What changed
+A static `HIDDEN_GLUTEN_BLOCKLIST` has been added to `model_deployment/backend/model_service.py`. When a user's dietary profile includes any gluten-free restriction, the full blocklist is automatically injected into the LLM prompt as an explicit **MANDATORY RESTRICTION** before the recipe request is sent to the external API.
 
-### Blocklist (`HIDDEN_GLUTEN_BLOCKLIST`)
-The following 15 ingredients are flagged as hidden gluten sources and are explicitly forbidden in the generated prompt:
+### Why it matters
+Many common ingredients appear safe but secretly contain gluten (e.g. soy sauce contains wheat). Without an explicit blocklist, the LLM may inadvertently suggest these ingredients even when a gluten-free diet is requested.
 
-| Ingredient | Why it's hidden |
+### Blocked ingredients (15 hidden-gluten sources)
+| Ingredient | Why it contains gluten |
 |---|---|
-| soy sauce | traditionally brewed with wheat |
-| wheat starch | direct wheat derivative |
-| malt vinegar | barley-derived |
-| barley malt | contains gluten |
-| regular oats | cross-contaminated unless certified GF |
-| seitan | made from wheat gluten |
-| teriyaki sauce | contains soy sauce (wheat) |
-| hoisin sauce | contains wheat flour |
-| oyster sauce | often thickened with wheat starch |
-| worcestershire sauce | contains malt vinegar |
-| malt extract | barley-derived |
-| spelt | ancient wheat variety |
-| kamut | ancient wheat variety |
-| farro | wheat species |
-| bulgur | cracked wheat |
+| Soy sauce | Traditionally brewed with wheat |
+| Wheat starch | Derived directly from wheat |
+| Malt vinegar | Made from barley malt |
+| Barley malt | Contains gluten from barley |
+| Regular oats | Cross-contaminated with wheat unless certified GF |
+| Seitan | Made entirely from wheat gluten |
+| Teriyaki sauce | Contains soy sauce (wheat) |
+| Hoisin sauce | Contains wheat flour |
+| Oyster sauce | Often thickened with wheat starch |
+| Worcestershire sauce | May contain malt vinegar (barley) |
+| Malt extract | Derived from barley |
+| Spelt | Ancient wheat variety — contains gluten |
+| Kamut | Ancient wheat variety — contains gluten |
+| Farro | Ancient wheat variety — contains gluten |
+| Bulgur | Cracked wheat — contains gluten |
 
 ### How it works
-1. When `generate_recipe()` is called with a preference that contains `"gluten"` (e.g. `"gluten-free"`), the service appends two constraint lines to `strict_restrictions`:
+1. `generate_recipe()` in `model_service.py` checks whether any dietary restriction contains `"gluten"`.
+2. If matched, it appends two entries to `strict_restrictions`:
    - `ABSOLUTELY NO gluten (no wheat, barley, rye, regular pasta, bread, flour)`
-   - `HIDDEN GLUTEN SOURCES — DO NOT USE (these contain gluten despite appearing safe): <blocklist>`
-2. These restrictions are embedded in the `⚠️ MANDATORY RESTRICTIONS` block that is prepended to both `custom_preferences` and the `user_request` payload sent to the external LLM API.
-3. A log line is printed to backend stdout at the point of injection:
+   - `HIDDEN GLUTEN SOURCES — DO NOT USE (these contain gluten despite appearing safe): <full blocklist>`
+3. The restriction block is prepended to `custom_preferences` and also embedded in `user_request`, so both fields sent to the LLM carry the constraint.
+4. A log line is emitted:
    ```
    🚫 Gluten-free profile detected — injecting hidden-gluten blocklist: soy sauce, wheat starch, ...
    ```
@@ -52,14 +54,14 @@ Search backend logs for:
 ```
 🚫 Gluten-free profile detected — injecting hidden-gluten blocklist
 ```
-This line is emitted once per `generate_recipe` call where gluten-free is active.
+This line is printed every time the blocklist is injected, making it auditable per request.
 
-### Tests added (`tests/backend/test_recipes.py`)
-| Test | What it checks |
-|---|---|
-| `test_gluten_free_profile_injects_blocklist` | Calls `/recipes/generate` with a gluten-free profile via the HTTP client and asserts the dietary restriction is forwarded correctly. |
-| `test_gluten_free_blocklist_content_in_prompt` | Directly instantiates `ModelService`, patches `requests.post`, and asserts every blocklist item appears in the constructed payload. Also asserts `len(HIDDEN_GLUTEN_BLOCKLIST) >= 10`. |
-| `test_non_gluten_free_profile_no_blocklist` | Runs the same flow with a `vegan` profile and confirms the blocklist items are **not** present in the payload. |
+### Tests added
+| Test | File | What it verifies |
+|---|---|---|
+| `test_gluten_free_blocklist_content_in_prompt` | `tests/backend/test_recipes.py` | All 15 blocklist items appear in the payload sent to the LLM API |
+| `test_gluten_free_profile_injects_blocklist` | `tests/backend/test_recipes.py` | The `generate_recipe` mock is called with gluten-free dietary restrictions when profile is set |
+| `test_non_gluten_free_profile_no_blocklist` | `tests/backend/test_recipes.py` | Blocklist items are absent from the prompt for non-gluten-free profiles (e.g. vegan) |
 
 ---
 *Created by [BuildRight](https://buildrightai.app)*

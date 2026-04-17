@@ -8,6 +8,25 @@ import json
 from typing import List, Dict, Optional
 import os
 
+# Hidden gluten sources not obvious from ingredient names alone
+HIDDEN_GLUTEN_BLOCKLIST = [
+    "soy sauce",
+    "wheat starch",
+    "malt vinegar",
+    "barley malt",
+    "regular oats",
+    "seitan",
+    "teriyaki sauce",
+    "hoisin sauce",
+    "oyster sauce",
+    "worcestershire sauce",
+    "malt extract",
+    "spelt",
+    "kamut",
+    "farro",
+    "bulgur",
+]
+
 class ModelService:
     def __init__(self):
         """
@@ -69,6 +88,12 @@ class ModelService:
                 strict_restrictions.append("ABSOLUTELY NO animal products (no eggs, dairy, milk, cheese, butter, cream, honey)")
             if any("gluten" in d.lower() for d in dietary):
                 strict_restrictions.append("ABSOLUTELY NO gluten (no wheat, barley, rye, regular pasta, bread, flour)")
+                # Inject hidden-gluten blocklist for celiac/gluten-free users
+                blocklist_str = ", ".join(HIDDEN_GLUTEN_BLOCKLIST)
+                strict_restrictions.append(
+                    f"HIDDEN GLUTEN SOURCES — DO NOT USE (these contain gluten despite appearing safe): {blocklist_str}"
+                )
+                print(f"🚫 Gluten-free profile detected — injecting hidden-gluten blocklist: {blocklist_str}")
         
         if allergies:
             allergies_str = ", ".join(allergies)
@@ -82,17 +107,17 @@ class ModelService:
         # Build the final request with strict instructions
         restriction_text = ""
         if strict_restrictions:
-            restriction_text = "\n\n⚠️ MANDATORY RESTRICTIONS (MUST FOLLOW - NO EXCEPTIONS):\n" + "\n".join(f"• {r}" for r in strict_restrictions) + "\n\nDo NOT suggest any recipe that violates these restrictions. This is non-negotiable.\n\n"
+            restriction_text = "\n\n⚠️ MANDATORY RESTRICTIONS (MUST FOLLOW — NO EXCEPTIONS):\n" + "\n".join(f"• {r}" for r in strict_restrictions) + "\n\nDo NOT suggest any recipe that violates these restrictions. This is non-negotiable.\n\n"
             api_preferences["custom_preferences"] = restriction_text + api_preferences["custom_preferences"]
             
         # Append instruction for detailed steps and strict ingredient usage
         detailed_request = (
             f"{user_request}"
             f"{restriction_text}"
-            "Please provide detailed, step-by-step cooking instructions. "
+            "Provide detailed, step-by-step cooking instructions. "
             "Use the provided inventory as the primary ingredient source. "
-            "Keep missing/shopping list ingredients to 3 or fewer; prefer substitutions from inventory over adding new items. "
-            "Use only ingredients you list in the recipe; do not include ingredients that are unused or marked as 'ignore'. "
+            "Limit missing/shopping list ingredients to 3 or fewer; prefer inventory substitutions over new items. "
+            "Only include ingredients that are actively used in the recipe steps. "
             "Keep the ingredient list tightly aligned to the actual steps."
         )
 
@@ -124,48 +149,10 @@ class ModelService:
                 return json.dumps(data["recipe"])
             else:
                 return json.dumps(data)
-            
+                
+        except requests.exceptions.Timeout:
+            print(f"⏱️ API timeout after {self.timeout}s")
+            raise Exception(f"Recipe generation timed out after {self.timeout} seconds")
         except requests.exceptions.RequestException as e:
-            print(f"❌ API Request failed: {e}")
-            return json.dumps({
-                "raw_text": f"Sorry, I couldn't generate a recipe at this time. Error: {str(e)}"
-            })
-
-    def generate_comparison(
-        self,
-        inventory: List[Dict],
-        preferences: Dict,
-        user_request: str = "",
-        max_tokens: int = 512
-    ) -> Dict[str, str]:
-        """
-        Generate recipes comparison (Mocked for external API)
-        """
-        # For now, just return the same recipe for both or handle as needed.
-        # Since the external API doesn't support comparison explicitly in the same way,
-        # we'll just generate one recipe.
-        
-        recipe = self.generate_recipe(inventory, preferences, user_request)
-        
-        return {
-            "base": recipe,
-            "finetuned": recipe
-        }
-
-    def cleanup(self):
-        """No-op for API service"""
-        pass
-
-
-# Global model instance
-_model_service: Optional[ModelService] = None
-
-
-def get_model_service() -> ModelService:
-    """Get or create global model service instance"""
-    global _model_service
-
-    if _model_service is None:
-        _model_service = ModelService()
-
-    return _model_service
+            print(f"❌ API request failed: {e}")
+            raise Exception(f"Recipe generation failed: {str(e)}")

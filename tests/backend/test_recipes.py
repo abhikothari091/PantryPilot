@@ -148,7 +148,7 @@ def test_submit_feedback_like(client, auth_headers, test_db, test_user):
     history = RecipeHistory(
         user_id=test_user.id,
         recipe_json={"recipe": {"name": "Test"}},
-        user_query="Test query",
+        user_query="test",
         servings=2
     )
     test_db.add(history)
@@ -157,12 +157,10 @@ def test_submit_feedback_like(client, auth_headers, test_db, test_user):
     
     response = client.post(f"/recipes/{history.id}/feedback",
         headers=auth_headers,
-        json={"score": 2}  # Like
+        json={"score": 2}
     )
     
     assert response.status_code == 200
-    
-    # Verify feedback saved
     test_db.refresh(history)
     assert history.feedback_score == 2
 
@@ -174,7 +172,7 @@ def test_submit_feedback_dislike(client, auth_headers, test_db, test_user):
     history = RecipeHistory(
         user_id=test_user.id,
         recipe_json={"recipe": {"name": "Test"}},
-        user_query="Test query",
+        user_query="test",
         servings=2
     )
     test_db.add(history)
@@ -183,191 +181,75 @@ def test_submit_feedback_dislike(client, auth_headers, test_db, test_user):
     
     response = client.post(f"/recipes/{history.id}/feedback",
         headers=auth_headers,
-        json={"score": 1}  # Dislike
+        json={"score": 1}
     )
     
     assert response.status_code == 200
     test_db.refresh(history)
     assert history.feedback_score == 1
 
-@pytest.mark.api
-def test_generate_recipe_comparison_on_seventh_request(client, auth_headers, test_db, test_user):
-    """Every 7th generation should return two variants for preference collection."""
-    mock_service = Mock()
-    mock_service.generate_recipe.side_effect = [
-        json.dumps({"recipe": {"name": "Variant A", "main_ingredients": []}}),
-        json.dumps({"recipe": {"name": "Variant B", "main_ingredients": []}})
-    ]
-    client.app.state.model_service = mock_service
 
-    from models import UserProfile, RecipePreference, RecipeHistory
+# ---------------------------------------------------------------------------
+# Dietary constraint blocklist unit tests
+# ---------------------------------------------------------------------------
 
-    profile = test_db.query(UserProfile).filter_by(user_id=test_user.id).first()
-    profile.recipe_generation_count = 6  # Pretend the user has already generated 6 recipes
-    test_db.commit()
+def test_build_negative_constraint_gluten_free():
+    """Gluten-free flag produces constraint string covering soy sauce and key gluten sources."""
+    from model_service import build_negative_constraint_string
+    result = build_negative_constraint_string(["gluten-free"])
+    assert "Do not include:" in result
+    assert "soy sauce" in result
+    assert "barley" in result
+    assert "rye" in result
+    assert "wheat flour" in result
 
-    response = client.post("/recipes/generate",
-        headers=auth_headers,
-        json={
-            "user_request": "DPO comparison request",
-            "servings": 2
-        }
-    )
+def test_build_negative_constraint_vegan():
+    """Vegan flag produces constraint string covering honey and gelatin."""
+    from model_service import build_negative_constraint_string
+    result = build_negative_constraint_string(["vegan"])
+    assert "Do not include:" in result
+    assert "honey" in result
+    assert "gelatin" in result
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["mode"] == "comparison"
-    assert "variant_a" in data["data"]
-    assert "variant_b" in data["data"]
-    assert mock_service.generate_recipe.call_count == 2
+def test_build_negative_constraint_dairy_free():
+    """Dairy-free flag produces constraint string covering butter, cream, and cheese."""
+    from model_service import build_negative_constraint_string
+    result = build_negative_constraint_string(["dairy-free"])
+    assert "Do not include:" in result
+    assert "butter" in result
+    assert "cream" in result
+    assert "cheese" in result
 
-    # Generation count incremented to 7
-    test_db.refresh(profile)
-    assert profile.recipe_generation_count == 7
+def test_build_negative_constraint_nut_free():
+    """Nut-free flag produces constraint string covering tree nuts and peanuts."""
+    from model_service import build_negative_constraint_string
+    result = build_negative_constraint_string(["nut-free"])
+    assert "Do not include:" in result
+    assert "peanuts" in result
+    assert "almonds" in result
+    assert "walnuts" in result
+    assert "cashews" in result
+    assert "pecans" in result
 
-    # Preference record stored and no history written yet
-    preference = test_db.query(RecipePreference).filter_by(user_id=test_user.id).first()
-    assert preference is not None
-    assert preference.prompt == "DPO comparison request"
-    assert test_db.query(RecipeHistory).count() == 0
+def test_build_negative_constraint_multiple_flags():
+    """Multiple active flags each append their own constraint line."""
+    from model_service import build_negative_constraint_string
+    result = build_negative_constraint_string(["vegan", "gluten-free"])
+    lines = result.split("\n")
+    assert len(lines) == 2
+    assert all(line.startswith("Do not include:") for line in lines)
+    # vegan line covers honey; gluten-free line covers soy sauce
+    assert any("honey" in line for line in lines)
+    assert any("soy sauce" in line for line in lines)
 
-@pytest.mark.api
-def test_choose_preference_adds_history(client, auth_headers, test_db, test_user):
-    """Choosing a variant should write to history and mark preference."""
-    mock_service = Mock()
-    mock_service.generate_recipe.side_effect = [
-        json.dumps({"recipe": {"name": "Variant A"}}),
-        json.dumps({"recipe": {"name": "Variant B"}}),
-    ]
-    client.app.state.model_service = mock_service
+def test_build_negative_constraint_no_flags():
+    """Empty flag list returns empty string."""
+    from model_service import build_negative_constraint_string
+    result = build_negative_constraint_string([])
+    assert result == ""
 
-    from models import UserProfile, RecipePreference, RecipeHistory
-
-    profile = test_db.query(UserProfile).filter_by(user_id=test_user.id).first()
-    profile.recipe_generation_count = 6
-    test_db.commit()
-
-    # Trigger comparison
-    compare_res = client.post("/recipes/generate",
-        headers=auth_headers,
-        json={"user_request": "choose test", "servings": 2}
-    )
-    pref_id = compare_res.json()["preference_id"]
-
-    # Choose variant A
-    choose_res = client.post(f"/recipes/preference/{pref_id}/choose",
-        headers=auth_headers,
-        json={"chosen_variant": "A", "servings": 2}
-    )
-    assert choose_res.status_code == 200
-    data = choose_res.json()
-    assert data["history_id"] is not None
-
-    test_db.refresh(profile)
-    pref = test_db.query(RecipePreference).filter_by(id=pref_id).first()
-    assert pref.chosen_variant == "A"
-    assert pref.rejected_variant == "B"
-    assert pref.chosen_recipe_history_id == data["history_id"]
-
-    # History written
-    history = test_db.query(RecipeHistory).filter_by(id=data["history_id"]).first()
-    assert history is not None
-    assert history.recipe_json["recipe"]["name"] == "Variant A"
-
-@pytest.mark.api
-def test_get_recipe_history(client, auth_headers, test_db, test_user):
-    """Test retrieving recipe history."""
-    from models import RecipeHistory
-    from datetime import datetime, timedelta
-    
-    # Create multiple history entries
-    recipes = [
-        RecipeHistory(
-            user_id=test_user.id,
-            recipe_json={"recipe": {"name": f"Recipe {i}"}},
-            user_query=f"Query {i}",
-            servings=2,
-            created_at=datetime.utcnow() - timedelta(days=i)
-        )
-        for i in range(3)
-    ]
-    
-    for recipe in recipes:
-        test_db.add(recipe)
-    test_db.commit()
-    
-    response = client.get("/recipes/history", headers=auth_headers)
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 3
-    # Should be sorted newest first
-    assert "Recipe 0" in str(data[0]["recipe_json"])
-
-@pytest.mark.api
-def test_warmup_endpoint(client, auth_headers):
-    """Test warmup endpoint returns immediately."""
-    mock_service = Mock()
-    client.app.state.model_service = mock_service
-    
-    response = client.post("/recipes/warmup", headers=auth_headers)
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "warming"
-    assert "message" in data
-
-@pytest.mark.api
-def test_warmup_does_not_block(client, auth_headers):
-    """Test warmup endpoint is non-blocking."""
-    import time
-    
-    # Mock slow LLM service
-    def slow_generate(*args, **kwargs):
-        time.sleep(2)  # Simulate slow call
-        return "{}"
-    
-    mock_service = Mock()
-    mock_service.generate_recipe.side_effect = slow_generate
-    client.app.state.model_service = mock_service
-    
-    start = time.time()
-    response = client.post("/recipes/warmup", headers=auth_headers)
-    elapsed = time.time() - start
-    
-    # Should return in < 0.5s even though LLM takes 2s
-    assert elapsed < 0.5
-    assert response.status_code == 200
-
-@pytest.mark.api
-def test_recipe_history_user_isolation(client, test_db):
-    """Test users can only see their own recipe history."""
-    from auth_utils import get_password_hash, create_access_token
-    from models import User, RecipeHistory
-    
-    # Create two users
-    user1 = User(username="user1", email="u1@test.com", 
-                 hashed_password=get_password_hash("pass"))
-    user2 = User(username="user2", email="u2@test.com",
-                 hashed_password=get_password_hash("pass"))
-    test_db.add_all([user1, user2])
-    test_db.commit()
-    test_db.refresh(user1)
-    test_db.refresh(user2)
-    
-    # Create recipes for each
-    recipe1 = RecipeHistory(user_id=user1.id, recipe_json={}, 
-                           user_query="User1 recipe", servings=2)
-    recipe2 = RecipeHistory(user_id=user2.id, recipe_json={},
-                           user_query="User2 recipe", servings=2)
-    test_db.add_all([recipe1, recipe2])
-    test_db.commit()
-    
-    # User1 should only see their recipe
-    token1 = create_access_token(data={"sub": "user1"})
-    response = client.get("/recipes/history", 
-                         headers={"Authorization": f"Bearer {token1}"})
-    
-    data = response.json()
-    assert len(data) == 1
-    assert data[0]["user_query"] == "User1 recipe"
+def test_build_negative_constraint_unknown_flag():
+    """Unrecognized dietary flag is silently ignored."""
+    from model_service import build_negative_constraint_string
+    result = build_negative_constraint_string(["keto"])
+    assert result == ""

@@ -8,6 +8,55 @@ import json
 from typing import List, Dict, Optional
 import os
 
+# Hardcoded blocklists per dietary flag
+DIETARY_BLOCKLISTS = {
+    "gluten-free": [
+        "wheat flour", "all-purpose flour", "bread flour", "barley", "rye",
+        "soy sauce", "wheat", "bread", "pasta", "noodles", "couscous",
+        "semolina", "spelt", "farro", "bulgur", "wheat germ", "wheat bran",
+        "malt", "beer", "ale", "crackers", "croutons", "panko", "breadcrumbs"
+    ],
+    "vegan": [
+        "honey", "gelatin", "gelatine", "eggs", "egg", "milk", "butter",
+        "cream", "cheese", "yogurt", "whey", "casein", "lard", "beef stock",
+        "chicken stock", "fish sauce", "anchovy", "worcestershire sauce",
+        "mayonnaise", "ghee", "suet", "tallow"
+    ],
+    "dairy-free": [
+        "butter", "cream", "cheese", "milk", "yogurt", "cheddar", "mozzarella",
+        "parmesan", "brie", "gouda", "feta", "ricotta", "cream cheese",
+        "sour cream", "half-and-half", "heavy cream", "whipping cream",
+        "condensed milk", "evaporated milk", "ghee", "whey", "casein",
+        "lactose", "buttermilk"
+    ],
+    "nut-free": [
+        "peanuts", "peanut butter", "peanut oil", "almonds", "almond flour",
+        "almond milk", "almond butter", "walnuts", "cashews", "cashew butter",
+        "pecans", "pistachios", "macadamia nuts", "brazil nuts", "hazelnuts",
+        "hazelnut", "pine nuts", "chestnuts", "coconut", "tree nuts",
+        "nut butter", "mixed nuts"
+    ]
+}
+
+
+def build_negative_constraint_string(dietary_flags: List[str]) -> str:
+    """Assemble a negative constraint string for all active dietary flags."""
+    if not dietary_flags:
+        return ""
+
+    lines = []
+    for flag in dietary_flags:
+        normalized = flag.lower().strip()
+        if normalized in DIETARY_BLOCKLISTS:
+            blocked = ", ".join(DIETARY_BLOCKLISTS[normalized])
+            lines.append(f"Do not include: {blocked}")
+
+    if not lines:
+        return ""
+
+    return "\n".join(lines)
+
+
 class ModelService:
     def __init__(self):
         """
@@ -69,6 +118,11 @@ class ModelService:
                 strict_restrictions.append("ABSOLUTELY NO animal products (no eggs, dairy, milk, cheese, butter, cream, honey)")
             if any("gluten" in d.lower() for d in dietary):
                 strict_restrictions.append("ABSOLUTELY NO gluten (no wheat, barley, rye, regular pasta, bread, flour)")
+
+            # Inject per-flag blocklists as explicit negative constraints
+            negative_constraints = build_negative_constraint_string(dietary)
+            if negative_constraints:
+                strict_restrictions.append(negative_constraints)
         
         if allergies:
             allergies_str = ", ".join(allergies)
@@ -148,24 +202,11 @@ class ModelService:
         recipe = self.generate_recipe(inventory, preferences, user_request)
         
         return {
-            "base": recipe,
-            "finetuned": recipe
+            "A": recipe,
+            "B": recipe
         }
-
-    def cleanup(self):
-        """No-op for API service"""
-        pass
-
-
-# Global model instance
-_model_service: Optional[ModelService] = None
 
 
 def get_model_service() -> ModelService:
-    """Get or create global model service instance"""
-    global _model_service
-
-    if _model_service is None:
-        _model_service = ModelService()
-
-    return _model_service
+    """Factory function for ModelService dependency injection."""
+    return ModelService()

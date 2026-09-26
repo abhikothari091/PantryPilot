@@ -401,6 +401,13 @@ Model artifacts under `model_development/models/` are ignored by git to keep the
 
 ## 🚀 How to Run the Data Pipeline (Local)
 
+### Prerequisites
+
+- Python 3.11
+- Git
+- A NeonDB (PostgreSQL) connection string
+- `dvc` and `gcloud` CLI configured for remote data access (optional, for pulling versioned datasets)
+
 ### 1. Setup
 
 ```bash
